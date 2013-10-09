@@ -2,7 +2,7 @@
 SET(MODULE_NAME mvi)
 
 # Set module name and source files here
-add_library(${MODULE_NAME} SHARED 
+add_library(${MODULE_NAME} MODULE
 	mvi.cpp
 	WandInputFilter.cpp
 	WandInputFilter.h
