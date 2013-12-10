@@ -6,11 +6,14 @@ add_library(${MODULE_NAME} MODULE
 	mvi.cpp
 	WandInputFilter.cpp
 	WandInputFilter.h
+	WandPointerSwitcher.cpp
+	WandPointerSwitcher.h
 	)
 
 # Set the module library dependencies here
 target_link_libraries(${MODULE_NAME}
-	omega)
+	omega
+	omegaToolkit)
 
 #------------------------------------------------------------------------------
 # DO NOT MODIFY ANYTHING BELOW AFTER THIS LINE
