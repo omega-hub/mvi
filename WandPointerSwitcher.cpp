@@ -52,7 +52,7 @@ void WandPointerSwitcher::poll()
     {
         Event* evt = getEvent(i);
         // Process mocap events.
-        if(evt->getType() == ServiceType::Wand)
+        if(evt->getServiceType() == Service::Wand)
         {
             DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
             DisplayConfig& dcfg = ds->getDisplayConfig();
@@ -77,7 +77,7 @@ void WandPointerSwitcher::poll()
                         if(etp == Event::Update) etp = Event::Move;
                         evt->reset(
                             etp, 
-                            ServiceType::Pointer, 
+                            Service::Pointer, 
                             evt->getSourceId(),
                             evt->getServiceId());
                     }
