@@ -1,5 +1,6 @@
 #include "WandInputFilter.h"
 #include "WandPointerSwitcher.h"
+#include "WorkspaceManager.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Python API follows
@@ -17,10 +18,21 @@ void setup()
 #include "omega/PythonInterpreterWrapper.h"
 BOOST_PYTHON_MODULE(mvi)
 {
-	// SceneLoader
 	PYAPI_REF_BASE_CLASS(WandInputFilter)
 		PYAPI_STATIC_REF_GETTER(WandInputFilter, createAndInitialize)
 		;
+
+    PYAPI_REF_BASE_CLASS(WorkspaceManager)
+        PYAPI_STATIC_REF_GETTER(WorkspaceManager, create)
+        PYAPI_REF_GETTER(WorkspaceManager, createWorkspace)
+        PYAPI_REF_GETTER(WorkspaceManager, findWorkspace)
+        ;
+
+    PYAPI_REF_BASE_CLASS(Workspace)
+        PYAPI_METHOD(Workspace, setTiles)
+        PYAPI_METHOD(Workspace, activate)
+        ;
+
     def("setup", setup);
 }
 #endif

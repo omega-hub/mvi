@@ -1,5 +1,5 @@
 # Set the module name here
-SET(MODULE_NAME mvi)
+set(MODULE_NAME mvi)
 
 # Set module name and source files here
 add_library(${MODULE_NAME} MODULE
@@ -8,6 +8,8 @@ add_library(${MODULE_NAME} MODULE
 	WandInputFilter.h
 	WandPointerSwitcher.cpp
 	WandPointerSwitcher.h
+	WorkspaceManager.cpp
+	WorkspaceManager.h
 	)
 
 # Set the module library dependencies here
