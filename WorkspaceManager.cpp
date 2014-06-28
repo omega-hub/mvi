@@ -5,109 +5,110 @@
 using namespace omegaToolkit;
 using namespace omegaToolkit::ui;
 
-///////////////////////////////////////////////////////////////////////////////
-Workspace::Workspace(const String& name):
-myName(name)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void Workspace::setTiles(const String& tiles)
-{
-    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-    DisplayConfig& dcfg = ds->getDisplayConfig();
-    Vector<String> tileNames = StringUtils::split(tiles, " ");
-    foreach(String tilename, tileNames)
-    {
-        if(dcfg.tiles.find(tilename) != dcfg.tiles.end())
-        {
-            myTiles.push_back(dcfg.tiles[tilename]);
-        }
-        else
-        {
-            ofwarn("Workspace::setTiles: could not find tile %1%", %tilename);
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void Workspace::activate()
-{
-    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-    DisplayConfig& dcfg = ds->getDisplayConfig();
-
-    // First disable all tiles
-    foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = false;
-
-    // The enable tiles in this workspace.
-    foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = true;
-}
+WorkspaceManager* sWMInstance = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 WorkspaceManager* WorkspaceManager::create()
 {
     WorkspaceManager* wm = new WorkspaceManager();
-    ModuleServices::addModule(wm);
+    sWMInstance = wm;
     return wm;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+WorkspaceManager* WorkspaceManager::instance()
+{
+    return sWMInstance;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 WorkspaceManager::WorkspaceManager()
 {
-    setPriority(EngineModule::PriorityHigh);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void WorkspaceManager::initialize() 
+WorkspaceLayout* WorkspaceManager::createLayout(const String& name)
 {
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void WorkspaceManager::dispose() 
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void WorkspaceManager::update(const UpdateContext& context) 
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void WorkspaceManager::handleEvent(const Event& evt) 
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-bool WorkspaceManager::handleCommand(const String& cmd) 
-{
-    Vector<String> args = StringUtils::split(cmd);
-    if(args[0] == "ws")
-    {
-        ofmsg("WORKSPACE NOW %1%", %args[1]);
-        Workspace* w = findWorkspace(args[1]);
-        if(w != NULL)
-        {
-            w->activate();
-        }
-        return true;
-    }
-    return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-Workspace* WorkspaceManager::createWorkspace(const String& name)
-{
-    Workspace* w = new Workspace(name);
-    myWorkspaces.push_back(w);
+    WorkspaceLayout* w = new WorkspaceLayout(name);
+    myLayouts[name] = w;
     return w;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-Workspace* WorkspaceManager::findWorkspace(const String& name)
+WorkspaceLayout* WorkspaceManager::findLayout(const String& name)
 {
-    foreach(Workspace* w, myWorkspaces)
+    if(myLayouts.find(name) == myLayouts.end()) return NULL;
+    return myLayouts[name];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+Workspace* WorkspaceManager::getWorkspace(const String& layout, const String& name)
+{
+    WorkspaceLayout* wl = findLayout(layout);
+    if(wl != NULL)
     {
-        if(w->getName() == name) return w;
+        Workspace* ws = wl->findWorkspace(name);
+        if(wl == NULL)
+        {
+            ofwarn("Could not find workspace '%1%' in layout '%2%'", %name %layout);
+        }
+        return ws;
+    }
+    else
+    {
+        ofwarn("Could not find workspace layout '%1%'", %layout);
     }
     return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WorkspaceManager::setActiveWorkspace(const String& fullname)
+{
+    // Process special workspace requests
+    if(fullname == "SPECIAL MINIMIZED")
+    {
+        // Whatever the current active workspace is, de-activate it.
+        if(myActiveWorkspace != NULL) myActiveWorkspace->deactivate();
+    }
+    else
+    {
+        Vector<String> args = StringUtils::split(fullname);
+        Workspace* ws = getWorkspace(args[0], args[1]);
+        if(ws != NULL)
+        {
+            myActiveWorkspace = ws;
+            ws->activate();
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WorkspaceManager::requestWorkspace(const String& layout, const String& workspace)
+{
+    // Send a request to the workspace server to see if we can allocate this workspace.
+    // If successful, the workspace server will send us a :ws command with the workspace
+    // id to confirm allocation and we will activate it.
+    MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
+    cli->postCommand(ostr(
+        "@server:" 
+        "WorkspaceAllocator.instance().requestWorkspace('%1%', '%2%', '%3%')",
+        %cli->getName() %layout %workspace));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WorkspaceManager::getWorkspacesContainingTile(DisplayTileConfig* tile, List<Workspace*>* outWorkspaces)
+{
+    foreach(LayoutDictionary::Item wl, myLayouts)
+    {
+        wl->getWorkspacesContainingTile(tile, outWorkspaces);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WorkspaceManager::createUi(Container* parent)
+{
+    foreach(LayoutDictionary::Item i, myLayouts)
+    {
+        i->createUi(parent);
+    }
 }

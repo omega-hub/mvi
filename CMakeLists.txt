@@ -4,10 +4,22 @@ set(MODULE_NAME mvi)
 # Set module name and source files here
 add_library(${MODULE_NAME} MODULE
 	mvi.cpp
+	AppControlOverlay.cpp
+	AppControlOverlay.h
+	AppLauncher.cpp
+	AppLauncher.h
+	AppInfo.cpp
+	AppInfo.h
 	WandInputFilter.cpp
 	WandInputFilter.h
 	WandPointerSwitcher.cpp
 	WandPointerSwitcher.h
+	Workspace.cpp
+	Workspace.h
+	WorkspaceLayout.cpp
+	WorkspaceLayout.h
+	WorkspaceAllocator.cpp
+	WorkspaceAllocator.h
 	WorkspaceManager.cpp
 	WorkspaceManager.h
 	)
