@@ -12,6 +12,7 @@
 #include "omegaToolkit/UiScriptCommand.h"
 #include "WorkspaceManager.h"
 #include "AppInfo.h"
+#include "WorkspaceAllocator.h"
 
 class AppLauncher;
 
