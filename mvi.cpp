@@ -21,9 +21,9 @@ void setup()
 #include "omega/PythonInterpreterWrapper.h"
 BOOST_PYTHON_MODULE(mvi)
 {
-	PYAPI_REF_BASE_CLASS(WandInputFilter)
-		PYAPI_STATIC_REF_GETTER(WandInputFilter, createAndInitialize)
-		;
+    PYAPI_REF_BASE_CLASS(WandInputFilter)
+        PYAPI_STATIC_REF_GETTER(WandInputFilter, createAndInitialize)
+        ;
 
     PYAPI_REF_BASE_CLASS(WorkspaceManager)
         PYAPI_STATIC_REF_GETTER(WorkspaceManager, create)

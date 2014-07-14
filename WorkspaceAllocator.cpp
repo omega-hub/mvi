@@ -62,15 +62,16 @@ Workspace* WorkspaceAllocator::findFreeWorkspace(int x, int y)
     myWorkspaceManager->getWorkspacesContainingTile(tile, &workspaces);
     // From the list of potential workspaces, find the largest one that has.
     // Not been allocated yet.
-    int maxTiles = 0;
+    int workspaceArea = 0;
     Workspace* result = NULL;
     foreach(Workspace* w, workspaces)
     {
         if(canAllocate(w, "UNDEFINED CLIENT"))
         {
-            if(w->getNumTiles() > maxTiles)
+            int area = w->getWorkspaceRect().width() * w->getWorkspaceRect().height();
+            if(area > workspaceArea)
             {
-                maxTiles = w->getNumTiles();
+                workspaceArea = area;
                 result = w;
             }
         }
@@ -137,15 +138,16 @@ void WorkspaceAllocator::updateLocalActiveTiles()
     DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
     DisplayConfig& dcfg = ds->getDisplayConfig();
 
+    // NOTE: we can't do this easily with workspace rects and no tile info.
     // First enable all tiles
-    foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = true;
+    //foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = true;
 
-    foreach(WorkspaceDictionary::Item i, myAllocatedWorkspaces)
-    {
-        if(i.getValue() != NULL)
-        {
-            // Then disable tiles used by any allocated workspace.
-            foreach(DisplayTileConfig* dtc, i->myTiles) dtc->enabled = false;
-        }
-    }
+    //foreach(WorkspaceDictionary::Item i, myAllocatedWorkspaces)
+    //{
+    //    if(i.getValue() != NULL)
+    //    {
+    //        // Then disable tiles used by any allocated workspace.
+    //        foreach(DisplayTileConfig* dtc, i->myTiles) dtc->enabled = false;
+    //    }
+    //}
 }

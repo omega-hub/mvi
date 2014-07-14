@@ -24,7 +24,7 @@ using namespace omegaToolkit::ui;
 class IAppLauncherListener
 {
 public:
-	virtual void startApp(AppInfo* app) = 0;
+    virtual void startApp(AppInfo* app) = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,25 +35,25 @@ public:
     static AppLauncher* instance();
 
 public:
-	AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceManager* wm, WorkspaceAllocator* a);
-	virtual ~AppLauncher() {}
+    AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceManager* wm, WorkspaceAllocator* a);
+    virtual ~AppLauncher() {}
 
-	void initialize();
-	ui::Container* getContainer() { return myContainer; }
-	UiModule* getUi() { return myUi; }
-	void update(const UpdateContext& context);
-	void handleEvent(const Event& evt);
-	void show();
-	void hide();
-	bool isVisible() { return myVisible; }
-	void addApp(AppInfo* app);
-	float getDrawerScale() { return myDrawerScale; }
-	void setDrawerScale(float value) { myDrawerScale = value; }
-	int getIconSize() { return myIconSize; }
-	void setIconSize(int value) { myIconSize = value; }
+    void initialize();
+    ui::Container* getContainer() { return myContainer; }
+    UiModule* getUi() { return myUi; }
+    void update(const UpdateContext& context);
+    void handleEvent(const Event& evt);
+    void show();
+    void hide();
+    bool isVisible() { return myVisible; }
+    void addApp(AppInfo* app);
+    float getDrawerScale() { return myDrawerScale; }
+    void setDrawerScale(float value) { myDrawerScale = value; }
+    int getIconSize() { return myIconSize; }
+    void setIconSize(int value) { myIconSize = value; }
 
-	void setListener(IAppLauncherListener* listener) { myListener = listener; }
-	IAppLauncherListener* getListener() { return myListener; }
+    void setListener(IAppLauncherListener* listener) { myListener = listener; }
+    IAppLauncherListener* getListener() { return myListener; }
 
     void removeAppInstance(const String& clientid);
     void run(AppInfo* app);
@@ -62,16 +62,16 @@ public:
     void onAppDisconnected(const String& client);
 
 private:
-	Ref<UiModule> myUi;
-	List < Ref<AppInfo> > myAppList;
-	Ref<ui::Container> myContainer;
+    Ref<UiModule> myUi;
+    List < Ref<AppInfo> > myAppList;
+    Ref<ui::Container> myContainer;
     Ref<MissionControlClient> myMissionControlClient;
-	PythonInterpreter* myInterpreter;
-	bool myVisible;
-	float myDrawerScale;
-	int myIconSize;
+    PythonInterpreter* myInterpreter;
+    bool myVisible;
+    float myDrawerScale;
+    int myIconSize;
 
-	IAppLauncherListener* myListener;
+    IAppLauncherListener* myListener;
     Ref<WorkspaceManager> myWorkspaceManager;
     Ref<WorkspaceAllocator> myWorkspaceAllocator;
 };

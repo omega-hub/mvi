@@ -29,15 +29,18 @@ public:
     //! Returns true if workspaces have overlapping tiles.
     bool overlaps(Workspace* other);
 
-    int getNumTiles() { return myTiles.size(); }
+    //int getNumTiles() { return myTiles.size(); }
     WorkspaceLayout* getLayout() { return myLayout; }
 
     PixelData* getIcon();
 
+    const Rect& getWorkspaceRect() { return myRect; }
+
 private:
     WorkspaceLayout* myLayout;
     String myName;
-    Vector<DisplayTileConfig*> myTiles;
+    Rect myRect;
+    //Vector<DisplayTileConfig*> myTiles;
 
     String myIconName;
     Ref<PixelData> myIcon;
