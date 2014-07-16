@@ -14,7 +14,7 @@ AppControlOverlay* AppControlOverlay::create()
 ///////////////////////////////////////////////////////////////////////////////
 AppControlOverlay::AppControlOverlay(PythonInterpreter* interp) :
 myUi(NULL), myInterpreter(interp), myModifyingCanvas(false),
-myMovingCanvas(false), mySizingCanvas(false)
+myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero())
 {
 }
 
@@ -66,18 +66,9 @@ void AppControlOverlay::initialize()
     //hide();
 }
 
-bool sknext = false;
-bool skok = false;
-
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::update(const UpdateContext& context)
 {
-    if(sknext)
-    {
-        sknext = false;
-        skok = true;
-    }
-
     float speed = context.dt * 10;
 
     ui::Container3dSettings& c3ds = myContainer->get3dSettings();
@@ -98,6 +89,25 @@ void AppControlOverlay::update(const UpdateContext& context)
             myVisible = true;
         }
     }
+
+    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+    DisplayConfig& dc = ds->getDisplayConfig();
+    if(myMovingCanvas)
+    {
+        Rect canvas = dc.getCanvasRect();
+        canvas.min += myPointerDelta;
+        canvas.max += myPointerDelta;
+        dc.setCanvasRect(canvas);
+        myLastPointerPos -= myPointerDelta;
+    }
+    else if(mySizingCanvas)
+    {
+        Rect canvas = dc.getCanvasRect();
+        canvas.max += myPointerDelta;
+        dc.setCanvasRect(canvas);
+        //ofmsg("Sizing: %1%", %myPointerDelta);
+    }
+    myPointerDelta = Vector2i::Zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -108,16 +118,6 @@ void AppControlOverlay::handleEvent(const Event& evt)
     {
         const Vector3f& pos3 = evt.getPosition();
         Vector2i pos(pos3[0], pos3[1]);
-
-        myPointerDelta = pos - myLastPointerPos;
-        myLastPointerPos = pos;
-
-        if(evt.getType() == Event::Move && skok)
-        {
-            skok = false;
-            evt.setProcessed();
-            return;
-        }
 
         if(myModifyingCanvas)
         {
@@ -133,28 +133,14 @@ void AppControlOverlay::handleEvent(const Event& evt)
                 myMovingCanvas = false;
             }
 
-            DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-            DisplayConfig& dc = ds->getDisplayConfig();
-
-            if(myMovingCanvas)
+            if(mySizingCanvas || myMovingCanvas)
             {
-                sknext = true;
-                Rect canvas = dc.getCanvasRect();
-                canvas.min += myPointerDelta;
-                canvas.max += myPointerDelta;
-                dc.setCanvasRect(canvas);
-                ofmsg("Moving: %1%", %myPointerDelta);
-            }
-            else if(mySizingCanvas)
-            {
-                Rect canvas = dc.getCanvasRect();
-                canvas.max += myPointerDelta;
-                dc.setCanvasRect(canvas);
-                ofmsg("Sizing: %1%", %myPointerDelta);
+                myPointerDelta += pos - myLastPointerPos;
             }
 
             evt.setProcessed();
         }
+        myLastPointerPos = pos;
     }
 
     if(evt.isKeyDown(KC_HOME))
@@ -163,11 +149,11 @@ void AppControlOverlay::handleEvent(const Event& evt)
         Container* root = myContainer->getContainer();
         if(myModifyingCanvas)
         {
-            root->setStyleValue("border", "8 red");
+            root->setStyleValue("border", "2 #FFB638");
         }
         else
         {
-            root->setStyleValue("border", "0 black");
+            root->setStyleValue("border", "1 #D119FF");
         }
     }
 }
