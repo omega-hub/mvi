@@ -57,5 +57,10 @@ private:
     int myIconSize;
 
     bool myModifyingCanvas;
+    bool myMovingCanvas;
+    bool mySizingCanvas;
+    // Pointer deltas used to compute canvas movement / resize
+    Vector2i myLastPointerPos;
+    Vector2i myPointerDelta;
 };
 #endif

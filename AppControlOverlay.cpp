@@ -13,7 +13,8 @@ AppControlOverlay* AppControlOverlay::create()
 
 ///////////////////////////////////////////////////////////////////////////////
 AppControlOverlay::AppControlOverlay(PythonInterpreter* interp) :
-myUi(NULL), myInterpreter(interp), myModifyingCanvas(false)
+myUi(NULL), myInterpreter(interp), myModifyingCanvas(false),
+myMovingCanvas(false), mySizingCanvas(false)
 {
 }
 
@@ -65,9 +66,18 @@ void AppControlOverlay::initialize()
     //hide();
 }
 
+bool sknext = false;
+bool skok = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::update(const UpdateContext& context)
 {
+    if(sknext)
+    {
+        sknext = false;
+        skok = true;
+    }
+
     float speed = context.dt * 10;
 
     ui::Container3dSettings& c3ds = myContainer->get3dSettings();
@@ -94,32 +104,66 @@ void AppControlOverlay::update(const UpdateContext& context)
 void AppControlOverlay::handleEvent(const Event& evt)
 {
     // See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
-    if(myUi->getPointerInteractionEnabled())
+    if(evt.getServiceType() == Service::Pointer)
     {
-        Event ne;
-        if(myContainer->rayToPointerEvent(evt, ne))
+        const Vector3f& pos3 = evt.getPosition();
+        Vector2i pos(pos3[0], pos3[1]);
+
+        myPointerDelta = pos - myLastPointerPos;
+        myLastPointerPos = pos;
+
+        if(evt.getType() == Event::Move && skok)
         {
-            //foreach(AppInfo* ai, myAppList)
-            //{
-            //	if(ai->myContainer->isEventInside(ne))
-            //	{
-            //		//if(mySelectedApp != ai) setSelectedApp(ai);
-            //		//if(ne.isButtonDown(UiModule::getClickButton()))
-            //		//{
-            //		//	if(myListener) myListener->startApp(mySelectedApp);
-   //  //                   else run(mySelectedApp);
-            //		//}
-            //	}
-            //}
+            skok = false;
+            evt.setProcessed();
+            return;
+        }
+
+        if(myModifyingCanvas)
+        {
+            if(evt.getType() == Event::Down)
+            {
+                if(evt.isFlagSet(Event::Left)) myMovingCanvas = true;
+                else if(evt.isFlagSet(Event::Right)) mySizingCanvas = true;
+
+            }
+            else if(evt.getType() == Event::Up)
+            {
+                mySizingCanvas = false;
+                myMovingCanvas = false;
+            }
+
+            DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+            DisplayConfig& dc = ds->getDisplayConfig();
+
+            if(myMovingCanvas)
+            {
+                sknext = true;
+                Rect canvas = dc.getCanvasRect();
+                canvas.min += myPointerDelta;
+                canvas.max += myPointerDelta;
+                dc.setCanvasRect(canvas);
+                ofmsg("Moving: %1%", %myPointerDelta);
+            }
+            else if(mySizingCanvas)
+            {
+                Rect canvas = dc.getCanvasRect();
+                canvas.max += myPointerDelta;
+                dc.setCanvasRect(canvas);
+                ofmsg("Sizing: %1%", %myPointerDelta);
+            }
+
+            evt.setProcessed();
         }
     }
-    if(evt.isKeyDown('o'))
+
+    if(evt.isKeyDown(KC_HOME))
     {
         myModifyingCanvas = !myModifyingCanvas;
         Container* root = myContainer->getContainer();
         if(myModifyingCanvas)
         {
-            root->setStyleValue("border", "5 red");
+            root->setStyleValue("border", "8 red");
         }
         else
         {
