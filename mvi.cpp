@@ -45,8 +45,11 @@ BOOST_PYTHON_MODULE(mvi)
         PYAPI_METHOD(Workspace, activate)
         ;
 
+    Workspace* (WorkspaceLayout::*createWorkspace1)(const String&, const String&, const String&) = &WorkspaceLayout::createWorkspace;
+    Workspace* (WorkspaceLayout::*createWorkspace2)(const String&, const String&, float, float, float, float) = &WorkspaceLayout::createWorkspace;
     PYAPI_REF_BASE_CLASS(WorkspaceLayout)
-        PYAPI_REF_GETTER(WorkspaceLayout, createWorkspace)
+        .def("createWorkspace", createWorkspace1, PYAPI_RETURN_REF)
+        .def("createWorkspace", createWorkspace2, PYAPI_RETURN_REF)
         PYAPI_REF_GETTER(WorkspaceLayout, findWorkspace)
         ;
 

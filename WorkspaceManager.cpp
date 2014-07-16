@@ -85,14 +85,24 @@ void WorkspaceManager::setActiveWorkspace(const String& fullname)
 ///////////////////////////////////////////////////////////////////////////////
 void WorkspaceManager::requestWorkspace(const String& layout, const String& workspace)
 {
-    // Send a request to the workspace server to see if we can allocate this workspace.
-    // If successful, the workspace server will send us a :ws command with the workspace
-    // id to confirm allocation and we will activate it.
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
-    cli->postCommand(ostr(
-        "@server:" 
-        "WorkspaceAllocator.instance().requestWorkspace('%1%', '%2%', '%3%')",
-        %cli->getName() %layout %workspace));
+
+    if(cli->isConnected() && cli->getName() != "server")
+    {
+        // Send a request to the workspace server to see if we can allocate this workspace.
+        // If successful, the workspace server will send us a :ws command with the workspace
+        // id to confirm allocation and we will activate it.
+        cli->postCommand(ostr(
+            "@server:"
+            "WorkspaceAllocator.instance().requestWorkspace('%1%', '%2%', '%3%')",
+            %cli->getName() % layout %workspace));
+    }
+    else
+    {
+        // If we are not connected to a server, always confirm and apply the 
+        // workspace request.
+        setActiveWorkspace(layout + " " + workspace);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

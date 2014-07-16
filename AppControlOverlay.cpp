@@ -5,24 +5,23 @@
 AppControlOverlay* AppControlOverlay::create()
 {
     PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
-    UiModule* uim = UiModule::createAndInitialize();
 
-    AppControlOverlay* ad = new AppControlOverlay(pi, uim);
+    AppControlOverlay* ad = new AppControlOverlay(pi);
     ModuleServices::addModule(ad);
-    ad->doInitialize(Engine::instance());
-
     return ad;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppControlOverlay::AppControlOverlay(PythonInterpreter* interp, UiModule* ui) :
-	myUi(ui), myInterpreter(interp)
+AppControlOverlay::AppControlOverlay(PythonInterpreter* interp) :
+myUi(NULL), myInterpreter(interp), myModifyingCanvas(false)
 {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::initialize()
 {
+    myUi = UiModule::createAndInitialize();
+
     String activeStyle = "alpha: 1.0; scale: 1.0;";
     String inactiveStyle = "alpha: 0.2; scale: 0.8;";
 
@@ -57,7 +56,10 @@ void AppControlOverlay::initialize()
     myCloseButton->setUIEventCommand("oexit()");
 
     WorkspaceManager* wm = WorkspaceManager::instance();
-    wm->createUi(myContainer);
+    if(wm != NULL)
+    {
+        wm->createUi(myContainer);
+    }
 
     show();
 	//hide();
@@ -113,8 +115,16 @@ void AppControlOverlay::handleEvent(const Event& evt)
 	}
     if(evt.isKeyDown('o'))
     {
-        if(myVisible) hide();
-        else show();
+        myModifyingCanvas = !myModifyingCanvas;
+        Container* root = myContainer->getContainer();
+        if(myModifyingCanvas)
+        {
+            root->setStyleValue("border", "5 red");
+        }
+        else
+        {
+            root->setStyleValue("border", "0 black");
+        }
     }
 }
 

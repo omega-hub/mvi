@@ -21,6 +21,23 @@ Workspace* WorkspaceLayout::createWorkspace(const String& name, const String& ic
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+Workspace* WorkspaceLayout::createWorkspace(const String& name, const String& icon, float x, float y, float w, float h)
+{
+    if(x <= 1 | y <= 1 | w <= 1 | h <= 1)
+    {
+        DisplayConfig& dc = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
+        x *= dc.displayResolution[0];
+        w *= dc.displayResolution[0];
+        y *= dc.displayResolution[1];
+        h *= dc.displayResolution[1];
+    }
+    Workspace* wk = new Workspace(name, this, icon);
+    wk->setWorkspaceRect(Rect((int)x, (int)y, (int)w, (int)h));
+    myWorkspaces[name] = wk;
+    return wk;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 Workspace* WorkspaceLayout::findWorkspace(const String& name)
 {
     if(myWorkspaces.find(name) == myWorkspaces.end()) return NULL;

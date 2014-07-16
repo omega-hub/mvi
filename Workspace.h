@@ -18,8 +18,13 @@ public:
 
     const String& getName() { return myName; }
     //! Sets the tiles associated to this workspace as a space
-    // separated string of tile names.
+    //! separated string of tile names. The list of tiles is used to compute
+    //! the size and position of this workspace.
     void setTiles(const String& tiles);
+
+    //! Sets the position and size of this workspace in pixels
+    void setWorkspaceRect(const Rect& r) { myRect = r;  }
+
 
     void activate();
     void deactivate();

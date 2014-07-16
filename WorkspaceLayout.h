@@ -17,7 +17,13 @@ public:
 
     const String& getName() { return myName; }
 
+    //! Create a workspace with area defined by the rectangle containing all 
+    //! passed tiles.
     Workspace* createWorkspace(const String& name, const String& icon, const String& tiles);
+    //! Create a workspace with area defined by the passes position, width and height.
+    //! If any of the passed values is les than 1, values are considered to be normalized
+    //! over the full display size. Otherwise, they are interpreted as pixel values.
+    Workspace* createWorkspace(const String& name, const String& icon, float x, float y, float w, float h);
     Workspace* findWorkspace(const String& name);
 
     //! Returns all the workspaces containing the specified tile.
