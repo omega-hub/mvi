@@ -25,8 +25,8 @@ void AppControlOverlay::initialize()
     String activeStyle = "alpha: 1.0; scale: 1.0;";
     String inactiveStyle = "alpha: 0.2; scale: 0.8;";
 
-	myDrawerScale = 1.0f;
-	myIconSize = 16;
+    myDrawerScale = 1.0f;
+    myIconSize = 16;
     myContainer = Container::create(Container::LayoutVertical, myUi->getUi());
     myContainer->setFillColor(Color::Black);
     myContainer->setFillEnabled(true);
@@ -62,57 +62,57 @@ void AppControlOverlay::initialize()
     }
 
     show();
-	//hide();
+    //hide();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::update(const UpdateContext& context)
 {
-	float speed = context.dt * 10;
+    float speed = context.dt * 10;
 
-	ui::Container3dSettings& c3ds = myContainer->get3dSettings();
+    ui::Container3dSettings& c3ds = myContainer->get3dSettings();
 
-	if(myContainer->isVisible())
-	{
-		if(c3ds.alpha <= 0.1f)
-		{
-			myContainer->setVisible(false);
-			myVisible = false;
-		}
-	}
-	else
-	{
-		if(c3ds.alpha > 0.1f)
-		{
-			myContainer->setVisible(true);
-			myVisible = true;
-		}
-	}
+    if(myContainer->isVisible())
+    {
+        if(c3ds.alpha <= 0.1f)
+        {
+            myContainer->setVisible(false);
+            myVisible = false;
+        }
+    }
+    else
+    {
+        if(c3ds.alpha > 0.1f)
+        {
+            myContainer->setVisible(true);
+            myVisible = true;
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::handleEvent(const Event& evt)
 {
-	// See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
-	if(myUi->getPointerInteractionEnabled())
-	{
-		Event ne;
-		if(myContainer->rayToPointerEvent(evt, ne))
-		{
-			//foreach(AppInfo* ai, myAppList)
-			//{
-			//	if(ai->myContainer->isEventInside(ne))
-			//	{
-			//		//if(mySelectedApp != ai) setSelectedApp(ai);
-			//		//if(ne.isButtonDown(UiModule::getClickButton()))
-			//		//{
-			//		//	if(myListener) myListener->startApp(mySelectedApp);
+    // See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
+    if(myUi->getPointerInteractionEnabled())
+    {
+        Event ne;
+        if(myContainer->rayToPointerEvent(evt, ne))
+        {
+            //foreach(AppInfo* ai, myAppList)
+            //{
+            //	if(ai->myContainer->isEventInside(ne))
+            //	{
+            //		//if(mySelectedApp != ai) setSelectedApp(ai);
+            //		//if(ne.isButtonDown(UiModule::getClickButton()))
+            //		//{
+            //		//	if(myListener) myListener->startApp(mySelectedApp);
    //  //                   else run(mySelectedApp);
-			//		//}
-			//	}
-			//}
-		}
-	}
+            //		//}
+            //	}
+            //}
+        }
+    }
     if(evt.isKeyDown('o'))
     {
         myModifyingCanvas = !myModifyingCanvas;
@@ -131,20 +131,20 @@ void AppControlOverlay::handleEvent(const Event& evt)
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::show()
 {
-	myVisible = true;
-	myContainer->setEnabled(true);
-	
-	UiModule::instance()->activateWidget(myContainer);
+    myVisible = true;
+    myContainer->setEnabled(true);
+    
+    UiModule::instance()->activateWidget(myContainer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppControlOverlay::hide()
 {
-	//omsg("Menu hide");
+    //omsg("Menu hide");
 
-	myVisible = false;
-	myContainer->setEnabled(false);
-	//myContainer->setDebugModeEnabled(true);
+    myVisible = false;
+    myContainer->setEnabled(false);
+    //myContainer->setDebugModeEnabled(true);
 
-	UiModule::instance()->activateWidget(NULL);
+    UiModule::instance()->activateWidget(NULL);
 }
