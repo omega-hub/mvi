@@ -1,0 +1,6 @@
+config:
+{
+    // Set the workspace configuration
+	systemConfig = "system/desktop-1080p.cfg";
+    initScript = "mvi/layouts/split2.py";
+};
