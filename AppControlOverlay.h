@@ -11,6 +11,8 @@
 #include "omegaToolkit/ui/Widget.h"
 #include "omegaToolkit/UiScriptCommand.h"
 
+#include "Workspace.h"
+
 class AppLauncher;
 
 using namespace omega;
@@ -40,10 +42,24 @@ public:
     int getIconSize() { return myIconSize; }
     void setIconSize(int value) { myIconSize = value; }
 
+    void setShortcut(Event::Flags button, const String& target, const String& command = "");
+
+private:
+    struct Shortcut : public ReferenceType
+    {
+        Event::Flags button;
+        Ref<PixelData> icon;
+        Workspace* target;
+        String command;
+    };
+
+    Shortcut* getOrCreateSortcut(Event::Flags button);
+
 private:
     Ref<UiModule> myUi;
     
     Ref<Container> myContainer;
+    Ref<Container> myBackground;
     Ref<Button> myMinimizeButton;
     Ref<Button> myCloseButton;
     Ref<Button> myExpandLeftButton;
@@ -62,5 +78,8 @@ private:
     // Pointer deltas used to compute canvas movement / resize
     Vector2i myLastPointerPos;
     Vector2i myPointerDelta;
+
+    // Shortcuts
+    List< Ref<Shortcut> > myShortcuts;
 };
 #endif

@@ -9,8 +9,6 @@
 using namespace omega;
 using namespace omegaToolkit;
 
-class WorkspaceLayout;
-
 ///////////////////////////////////////////////////////////////////////////////
 class WorkspaceManager : public ReferenceType
 {

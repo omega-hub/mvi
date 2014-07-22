@@ -11,4 +11,8 @@ split.createWorkspace('right', 'mvi/icons/right-12.png', 0.5, 0, 0.5, 1)
 
 wm.setActiveWorkspace('center full')
 
-_co = AppControlOverlay.create()
+aco = AppControlOverlay.create()
+aco.setShortcut(EventFlags.ButtonLeft, "split left")
+aco.setShortcut(EventFlags.ButtonRight, "split right")
+aco.setShortcut(EventFlags.ButtonUp, "center full")
+aco.setShortcut(EventFlags.ButtonDown, "split right")

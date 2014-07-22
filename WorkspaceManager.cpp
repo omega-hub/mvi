@@ -29,7 +29,7 @@ WorkspaceManager::WorkspaceManager()
 ///////////////////////////////////////////////////////////////////////////////
 WorkspaceLayout* WorkspaceManager::createLayout(const String& name)
 {
-    WorkspaceLayout* w = new WorkspaceLayout(name);
+    WorkspaceLayout* w = new WorkspaceLayout(name, this);
     myLayouts[name] = w;
     return w;
 }

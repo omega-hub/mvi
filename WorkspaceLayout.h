@@ -9,11 +9,13 @@
 using namespace omega;
 using namespace omegaToolkit;
 
+class WorkspaceManager;
+
 ///////////////////////////////////////////////////////////////////////////////
 class WorkspaceLayout : public ReferenceType
 {
 public:
-    WorkspaceLayout(const String& name);
+    WorkspaceLayout(const String& name, WorkspaceManager* mgr);
 
     const String& getName() { return myName; }
 
@@ -31,10 +33,13 @@ public:
 
     void createUi(ui::Container* parent);
 
+    WorkspaceManager* getWorkspaceManager() { return myManager; }
+
 private:
     String myName;
     typedef Dictionary< String, Ref<Workspace> > WorkspaceDictionary;
     WorkspaceDictionary myWorkspaces;
+    WorkspaceManager* myManager;
 };
 
 #endif

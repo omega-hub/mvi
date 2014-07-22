@@ -19,6 +19,8 @@ void setup()
 // Python wrapper code.
 #ifdef OMEGA_USE_PYTHON
 #include "omega/PythonInterpreterWrapper.h"
+
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AppControlOverlay_setShortcut, setShortcut, 2, 3)
 BOOST_PYTHON_MODULE(mvi)
 {
     PYAPI_REF_BASE_CLASS(WandInputFilter)
@@ -43,6 +45,7 @@ BOOST_PYTHON_MODULE(mvi)
     PYAPI_REF_BASE_CLASS(Workspace)
         PYAPI_METHOD(Workspace, setTiles)
         PYAPI_METHOD(Workspace, activate)
+        PYAPI_PROPERTY(Workspace, onActivated)
         ;
 
     Workspace* (WorkspaceLayout::*createWorkspace1)(const String&, const String&, const String&) = &WorkspaceLayout::createWorkspace;
@@ -83,6 +86,7 @@ BOOST_PYTHON_MODULE(mvi)
     // App drawer
     PYAPI_REF_BASE_CLASS(AppControlOverlay)
         PYAPI_STATIC_REF_GETTER(AppControlOverlay, create)
+        .def("setShortcut", &AppControlOverlay::setShortcut, AppControlOverlay_setShortcut())
         ;
 
     def("setup", setup);

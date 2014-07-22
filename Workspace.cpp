@@ -1,4 +1,5 @@
 #include "Workspace.h"
+#include "WorkspaceManager.h"
 
 #include <omegaToolkit.h>
 
@@ -34,6 +35,13 @@ void Workspace::setTiles(const String& tiles)
             ofwarn("Workspace::setTiles: could not find tile %1%", %tilename);
         }
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void Workspace::requestActivation()
+{
+    WorkspaceManager* wm = myLayout->getWorkspaceManager();
+    wm->requestWorkspace(myLayout->getName(), myName);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

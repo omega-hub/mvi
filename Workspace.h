@@ -14,6 +14,10 @@ class Workspace : public ReferenceType
 {
 friend class WorkspaceAllocator;
 public:
+    // Public fields (accessible from python)
+    String onActivated;
+
+public:
     Workspace(const String& name, WorkspaceLayout* layout, const String& icon);
 
     const String& getName() { return myName; }
@@ -26,7 +30,14 @@ public:
     void setWorkspaceRect(const Rect& r) { myRect = r;  }
 
 
+    //! Requests activation of this workspace. This call returns immediately.
+    //! If activation succeeds (i.e. the workspace area is not allocated to
+    //! other applications), the workspace will be activated at a later time
+    //! Immediately activates the workspace.
+    void requestActivation();
+
     void activate();
+    //! Immediately deactivated the workspace.
     void deactivate();
 
     bool containsTile(DisplayTileConfig*);

@@ -6,8 +6,8 @@ using namespace omegaToolkit;
 using namespace omegaToolkit::ui;
 
 ///////////////////////////////////////////////////////////////////////////////
-WorkspaceLayout::WorkspaceLayout(const String& name) :
-myName(name)
+WorkspaceLayout::WorkspaceLayout(const String& name, WorkspaceManager* mgr) :
+myName(name), myManager(mgr)
 {
 }
 
