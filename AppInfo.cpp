@@ -8,26 +8,26 @@
 ///////////////////////////////////////////////////////////////////////////////
 void AppInfo::initialize(AppLauncher* drawer)
 {
-	myDrawer = drawer;
+    myDrawer = drawer;
 
     command = "%orun -D - -c %cfg -s %file -N %appname -I %appid --mc @%mchost:%mcport";
 
-	myUi = myDrawer->getUi();
-	WidgetFactory* wf = myUi->getWidgetFactory();
+    myUi = myDrawer->getUi();
+    WidgetFactory* wf = myUi->getWidgetFactory();
 
-	myContainer = wf->createContainer(label, drawer->getContainer(), Container::LayoutVertical);
+    myContainer = wf->createContainer(label, drawer->getContainer(), Container::LayoutVertical);
 
     myContainer->setActiveStyle("fill: #505080");
     myContainer->setInactiveStyle("fill: #000000");
 
-	//myContainer->setUserData(this);
+    //myContainer->setUserData(this);
     myContainer->setUIEventHandler(this);
 
-	myImage = wf->createImage(label + "Icon", myContainer);
-	myImage->setData(ImageUtils::loadImage(iconFile));
-	myImage->setSize(Vector2f(myDrawer->getIconSize(), myDrawer->getIconSize()));
+    myImage = wf->createImage(label + "Icon", myContainer);
+    myImage->setData(ImageUtils::loadImage(iconFile));
+    myImage->setSize(Vector2f(myDrawer->getIconSize(), myDrawer->getIconSize()));
 
-	myLabel = wf->createLabel(label + "Label", myContainer, label);
+    myLabel = wf->createLabel(label + "Label", myContainer, label);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
