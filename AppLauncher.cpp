@@ -42,11 +42,11 @@ myUi(ui), myInterpreter(interp), myListener(NULL), myWorkspaceManager(wm), myWor
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::initialize()
 {
-	myDrawerScale = 1.0f;
-	myIconSize = 16;
-	myContainer = myUi->getWidgetFactory()->createContainer("AppLauncher", myUi->getUi(), Container::LayoutHorizontal);
+    myDrawerScale = 1.0f;
+    myIconSize = 16;
+    myContainer = myUi->getWidgetFactory()->createContainer("AppLauncher", myUi->getUi(), Container::LayoutHorizontal);
     myContainer->setLayer(Widget::Front);
-	hide();
+    hide();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,8 +68,8 @@ void AppLauncher::onAppDisconnected(const String& client)
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::addApp(AppInfo* info)
 {
-	info->initialize(this);
-	myAppList.push_back(info);
+    info->initialize(this);
+    myAppList.push_back(info);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,8 +123,8 @@ void AppLauncher::run(AppInfo* app)
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::show()
 {
-	myVisible = true;
-	myContainer->setEnabled(true);
+    myVisible = true;
+    myContainer->setEnabled(true);
     myContainer->setVisible(true);
     UiModule::instance()->activateWidget(myContainer);
 }
@@ -132,14 +132,14 @@ void AppLauncher::show()
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::hide()
 {
-	//omsg("Menu hide");
+    //omsg("Menu hide");
 
-	myVisible = false;
-	myContainer->setEnabled(false);
+    myVisible = false;
+    myContainer->setEnabled(false);
     myContainer->setVisible(false);
     //myContainer->setDebugModeEnabled(true);
 
-	UiModule::instance()->activateWidget(NULL);
+    UiModule::instance()->activateWidget(NULL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
