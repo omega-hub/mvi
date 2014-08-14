@@ -70,6 +70,7 @@ private:
     Ref<Button> myShrinkLeftButton;
 
     PythonInterpreter* myInterpreter;
+    bool myShowOverlay;
     bool myVisible;
     float myDrawerScale;
     int myIconSize;

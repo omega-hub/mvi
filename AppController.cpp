@@ -21,7 +21,8 @@ myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
 myModeSwitchButton(Event::Alt),
 myMoveButton(Event::Button1),
 myResizeButton(Event::Button2),
-myUsingLocalPointer(false)
+myUsingLocalPointer(false),
+myShowOverlay(false)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -40,6 +41,8 @@ void AppController::initialize()
         if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
         if(sMoveButton != "") myMoveButton = Event::parseButtonName(sMoveButton);
         if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
+        
+        myShowOverlay = Config::getBoolValue("showOverlay", s, false);
     }
 
     myUi = UiModule::createAndInitialize();
@@ -152,10 +155,12 @@ void AppController::handleEvent(const Event& evt)
         // generated this event.
         myActiveUserId = evt.getUserId();
         myModifyingCanvas = true;
+        if(myShowOverlay) show();
     }
     else if(evt.isButtonUp(myModeSwitchButton))
     {
         myModifyingCanvas = false;
+        if(myShowOverlay) hide();
     }
 
     // Head tracking management: if we get a mocap event whose id is the same
@@ -189,7 +194,7 @@ void AppController::handleEvent(const Event& evt)
         {
             DisplayConfig& dcfg = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
             pos[0] = evt.getExtraDataFloat(2) * dcfg.displayResolution[0];
-            pos[1] = (1.0f - evt.getExtraDataFloat(3)) * dcfg.displayResolution[1];
+            pos[1] = evt.getExtraDataFloat(3) * dcfg.displayResolution[1];
             //ofmsg("pos: %1% %2%", 
             //    %evt.getExtraDataFloat(2) %evt.getExtraDataFloat(3));
         }
