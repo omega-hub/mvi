@@ -1,15 +1,19 @@
+request_dependency(porthole)
+
 # Set the module name here
 set(MODULE_NAME mvi)
 
 # Set module name and source files here
 add_library(${MODULE_NAME} MODULE
 	mvi.cpp
-	AppControlOverlay.cpp
-	AppControlOverlay.h
+	AppController.cpp
+	AppController.h
 	AppLauncher.cpp
 	AppLauncher.h
 	AppInfo.cpp
 	AppInfo.h
+	AppManager.cpp
+	AppManager.h
 	WandInputFilter.cpp
 	WandInputFilter.h
 	WandPointerSwitcher.cpp
@@ -18,16 +22,16 @@ add_library(${MODULE_NAME} MODULE
 	Workspace.h
 	WorkspaceLayout.cpp
 	WorkspaceLayout.h
-	WorkspaceAllocator.cpp
-	WorkspaceAllocator.h
-	WorkspaceManager.cpp
-	WorkspaceManager.h
+	WorkspaceLibrary.cpp
+	WorkspaceLibrary.h
 	)
 
 # Set the module library dependencies here
 target_link_libraries(${MODULE_NAME}
 	omega
 	omegaToolkit)
+    
+add_subdirectory(appmgr)
 
 #------------------------------------------------------------------------------
 # DO NOT MODIFY ANYTHING BELOW AFTER THIS LINE

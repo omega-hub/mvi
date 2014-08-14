@@ -1,0 +1,8 @@
+config:
+{
+	display: { type = "Null"; };
+	services: {	};
+    orun: { initScript = ""; appStartFunction = "from mvi import *; AppManager.create()"; };
+	missionControl: { serverEnabled = true; };
+	pythonShellEnabled = true;
+};

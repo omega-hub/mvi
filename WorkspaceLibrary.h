@@ -10,29 +10,29 @@ using namespace omega;
 using namespace omegaToolkit;
 
 ///////////////////////////////////////////////////////////////////////////////
-class WorkspaceManager : public ReferenceType
+class WorkspaceLibrary : public ReferenceType
 {
 public:
-    static WorkspaceManager* create();
-    static WorkspaceManager* instance();
+    static WorkspaceLibrary* create();
+    static WorkspaceLibrary* instance();
 
 public:
-    WorkspaceManager();
+    WorkspaceLibrary();
 
     WorkspaceLayout* createLayout(const String& name);
     WorkspaceLayout* findLayout(const String& name);
     Workspace* getWorkspace(const String& layout, const String& name);
-    void setActiveWorkspace(const String& fullname);
-    void requestWorkspace(const String& layout, const String& workspace);
+    //void setActiveWorkspace(const String& fullname);
+    //void requestWorkspace(const String& layout, const String& workspace);
 
     //! Returns all the workspaces containing the specified tile.
     void getWorkspacesContainingTile(DisplayTileConfig* tile, List<Workspace*>* outWorkspaces);
 
-    void createUi(ui::Container* parent);
+    //void createUi(ui::Container* parent);
 
 private:
     typedef Dictionary< String, Ref<WorkspaceLayout> > LayoutDictionary;
     LayoutDictionary myLayouts;
-    Ref<Workspace> myActiveWorkspace;
+    //Ref<Workspace> myActiveWorkspace;
 };
 #endif

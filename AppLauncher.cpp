@@ -1,7 +1,8 @@
 #include "AppLauncher.h"
-#include "WorkspaceAllocator.h"
+#include "AppManager.h"
 #include "omegaToolkit/UiScriptCommand.h"
 #include "omega/MissionControl.h"
+
 
 AppLauncher* sADInstance = NULL;
 
@@ -17,9 +18,9 @@ AppLauncher* AppLauncher::create()
     PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
     UiModule* uim = UiModule::createAndInitialize();
 
-    WorkspaceAllocator* wa = new WorkspaceAllocator(WorkspaceManager::instance());
+    AppManager* wa = new AppManager();
 
-    AppLauncher* ad = new AppLauncher(pi, uim, WorkspaceManager::instance(), wa);
+    AppLauncher* ad = new AppLauncher(pi, uim, WorkspaceLibrary::instance(), wa);
     ModuleServices::addModule(ad);
     ad->doInitialize(Engine::instance());
 
@@ -29,8 +30,8 @@ AppLauncher* AppLauncher::create()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppLauncher::AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceManager* wm, WorkspaceAllocator* a) :
-myUi(ui), myInterpreter(interp), myListener(NULL), myWorkspaceManager(wm), myWorkspaceAllocator(a)
+AppLauncher::AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceLibrary* wm, AppManager* a) :
+myUi(ui), myInterpreter(interp), myListener(NULL), myWorkspaceLibrary(wm), myAppManager(a)
 {
     myMissionControlClient = SystemManager::instance()->getMissionControlClient();
     oassert(myMissionControlClient);
@@ -52,11 +53,11 @@ void AppLauncher::initialize()
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::onAppConnected(const String& client)
 {
-    if(client != "server")
-    {
-        myMissionControlClient->postCommand(ostr(
-            "@%1%:_aco = AppControlOverlay.create()", %client));
-    }
+    //if(client != "server")
+    //{
+    //    myMissionControlClient->postCommand(ostr(
+    //        "@%1%:_aco = AppController.create()", %client));
+    //}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,12 +105,12 @@ void AppLauncher::run(AppInfo* app)
     String cmd = app->command;
     cmd = StringUtils::replaceAll(cmd, "%orun", orunPath);
     cmd = StringUtils::replaceAll(cmd, "%file", app->file);
-    cmd = StringUtils::replaceAll(cmd, "%cfg", sys->getSystemConfig()->getFilename());
+    cmd = StringUtils::replaceAll(cmd, "%env", sys->getAppConfig()->getFilename());
     cmd = StringUtils::replaceAll(cmd, "%mchost", "127.0.0.1");
     cmd = StringUtils::replaceAll(cmd, "%mcport", boost::lexical_cast<String>(mcport));
     cmd = StringUtils::replaceAll(cmd, "%workspace", "split left");
 
-    int appid = myWorkspaceAllocator->allocateAppId();
+    int appid = myAppManager->allocateAppId();
     String appname = ostr("%1%-%2%", %app->id %appid);
 
     cmd = StringUtils::replaceAll(cmd, "%appname", appname);
@@ -160,5 +161,5 @@ void AppLauncher::removeAppInstance(const String& clientid)
     }
 
     // Free workspace used by this app
-    myWorkspaceAllocator->freeWorkspace(clientid);
+    //myAppManager->freeWorkspace(clientid);
 }

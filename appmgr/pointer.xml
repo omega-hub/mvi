@@ -1,0 +1,105 @@
+<gui>
+  <elements>
+    <element id="pointer_ui" type="HTML">
+        <div class="ui-body" data-mini="true">
+            <input type="button" data-role="button" value="Click to Enable Pointer" onclick="%js lockPointer()" 
+                data-shadow="false" data-corner="false" data-continuous="false" class="ui-btn"/>
+        </div>
+    </element>
+    
+    <element id="pointer_script" type="script">
+        function lockPointer() 
+        {
+            document.documentElement.webkitRequestPointerLock();
+        }  
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+        document.addEventListener("mousedown", onMouseDown);
+        document.addEventListener("keypress", onKeyDown);
+        document.addEventListener("keyup", onKeyUp);
+        
+        var movementX = 0;
+        var movementY = 0;
+        
+        function onMouseMove(e)
+        {
+           movementX = e.movementX       ||
+                          e.mozMovementX    ||
+                          e.webkitMovementX ||
+                          0;
+           movementY = e.movementY       ||
+                      e.mozMovementY    ||
+                      e.webkitMovementY ||
+                      0;
+
+            console.log(movementX);
+			var JSONEvent = {
+				"event_type": "drag",
+				"camera_id": 2,
+                "zoom": 1,
+				"x": movementX,
+				"y": movementY
+			};
+			socket.send(JSON.stringify(JSONEvent));
+        }
+        
+        function onMouseUp(e)
+        {
+			var JSONEvent = {
+				"event_type": "mouseup",
+				"camera_id": 2,
+                "zoom": 1,
+                "button": e.button,
+				"x": movementX, 
+				"y": movementY
+			};
+			socket.send(JSON.stringify(JSONEvent));
+        }
+        
+        function onMouseDown(e)
+        {
+			var JSONEvent = {
+				"event_type": "mousedown",
+				"camera_id": 2,
+                "zoom": 1,
+                "button": e.button,
+				"x": movementX, 
+				"y": movementY
+			};
+			socket.send(JSON.stringify(JSONEvent));
+        }
+        
+        function onKeyUp(e)
+        {
+			var JSONEvent = {
+				"event_type": "keyup",
+                "key": e.charCode
+			};
+			socket.send(JSON.stringify(JSONEvent));
+        }
+        
+        function onKeyDown(e)
+        {
+			var JSONEvent = {
+				"event_type": "keydown",
+                "key": e.charCode
+			};
+			socket.send(JSON.stringify(JSONEvent));
+        }
+    </element>
+  </elements>
+  
+  <interfaces>
+	<interface minWidth="0" minHeight="0" id="default">
+	  <portrait layout="vertical">
+		<element width="100%" height="100%" id="pointer_ui"/>
+		<element id="pointer_script"/>
+	  </portrait>
+	  <landscape layout="horizontal">
+		<element width="100%" height="100%" id="pointer_ui"/>
+		<element id="pointer_script"/>
+	  </landscape>
+	</interface>
+  </interfaces>
+</gui>

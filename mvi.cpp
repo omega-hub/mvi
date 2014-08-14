@@ -1,9 +1,9 @@
 #include "WandInputFilter.h"
 #include "WandPointerSwitcher.h"
-#include "WorkspaceManager.h"
-#include "WorkspaceAllocator.h"
+#include "WorkspaceLibrary.h"
+#include "AppManager.h"
 #include "AppLauncher.h"
-#include "AppControlOverlay.h"
+#include "AppController.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Python API follows
@@ -20,31 +20,30 @@ void setup()
 #ifdef OMEGA_USE_PYTHON
 #include "omega/PythonInterpreterWrapper.h"
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AppControlOverlay_setShortcut, setShortcut, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AppController_setShortcut, setShortcut, 2, 3)
 BOOST_PYTHON_MODULE(mvi)
 {
     PYAPI_REF_BASE_CLASS(WandInputFilter)
         PYAPI_STATIC_REF_GETTER(WandInputFilter, createAndInitialize)
         ;
 
-    PYAPI_REF_BASE_CLASS(WorkspaceManager)
-        PYAPI_STATIC_REF_GETTER(WorkspaceManager, create)
-        PYAPI_STATIC_REF_GETTER(WorkspaceManager, instance)
-        PYAPI_REF_GETTER(WorkspaceManager, createLayout)
-        PYAPI_REF_GETTER(WorkspaceManager, findLayout)
-        PYAPI_METHOD(WorkspaceManager, setActiveWorkspace)
-        PYAPI_METHOD(WorkspaceManager, requestWorkspace)
+    PYAPI_REF_BASE_CLASS(WorkspaceLibrary)
+        PYAPI_STATIC_REF_GETTER(WorkspaceLibrary, create)
+        PYAPI_STATIC_REF_GETTER(WorkspaceLibrary, instance)
+        PYAPI_REF_GETTER(WorkspaceLibrary, createLayout)
+        PYAPI_REF_GETTER(WorkspaceLibrary, findLayout)
         ;
 
-    PYAPI_REF_BASE_CLASS(WorkspaceAllocator)
-        PYAPI_STATIC_REF_GETTER(WorkspaceAllocator, instance)
-        PYAPI_METHOD(WorkspaceAllocator, requestWorkspace)
-        PYAPI_METHOD(WorkspaceAllocator, freeWorkspace)
+    PYAPI_REF_BASE_CLASS(AppManager)
+        PYAPI_STATIC_REF_GETTER(AppManager, instance)
+        PYAPI_STATIC_REF_GETTER(AppManager, create)
+        PYAPI_STATIC_REF_GETTER(AppManager, onAppCanvasChange)
+        //PYAPI_METHOD(AppManager, requestWorkspace)
+        //PYAPI_METHOD(AppManager, freeWorkspace)
         ;
 
     PYAPI_REF_BASE_CLASS(Workspace)
         PYAPI_METHOD(Workspace, setTiles)
-        PYAPI_METHOD(Workspace, activate)
         PYAPI_PROPERTY(Workspace, onActivated)
         ;
 
@@ -84,9 +83,9 @@ BOOST_PYTHON_MODULE(mvi)
         ;
 
     // App drawer
-    PYAPI_REF_BASE_CLASS(AppControlOverlay)
-        PYAPI_STATIC_REF_GETTER(AppControlOverlay, create)
-        .def("setShortcut", &AppControlOverlay::setShortcut, AppControlOverlay_setShortcut())
+    PYAPI_REF_BASE_CLASS(AppController)
+        PYAPI_STATIC_REF_GETTER(AppController, create)
+        .def("setShortcut", &AppController::setShortcut, AppController_setShortcut())
         ;
 
     def("setup", setup);

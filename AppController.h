@@ -20,14 +20,14 @@ using namespace omegaToolkit;
 using namespace omegaToolkit::ui;
 
 ///////////////////////////////////////////////////////////////////////////////
-class AppControlOverlay: public EngineModule
+class AppController: public EngineModule
 {
 public:
-    static AppControlOverlay* create();
+    static AppController* create();
 
 public:
-    AppControlOverlay(PythonInterpreter* interp);
-    virtual ~AppControlOverlay() {}
+    AppController(PythonInterpreter* interp);
+    virtual ~AppController() {}
 
     void initialize();
     ui::Container* getContainer() { return myContainer; }
@@ -45,6 +45,8 @@ public:
     void setShortcut(Event::Flags button, const String& target, const String& command = "");
 
 private:
+    void setAppCanvas(const Rect& canvasRect);
+
     struct Shortcut : public ReferenceType
     {
         Event::Flags button;
@@ -72,6 +74,10 @@ private:
     float myDrawerScale;
     int myIconSize;
 
+    Event::Flags myModeSwitchButton;
+    Event::Flags myMoveButton;
+    Event::Flags myResizeButton;
+
     bool myModifyingCanvas;
     bool myMovingCanvas;
     bool mySizingCanvas;
@@ -81,5 +87,7 @@ private:
 
     // Shortcuts
     List< Ref<Shortcut> > myShortcuts;
+
+    int myActiveUserId;
 };
 #endif

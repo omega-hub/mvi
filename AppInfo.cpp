@@ -1,7 +1,7 @@
 #include "AppInfo.h"
 #include "AppLauncher.h"
-#include "WorkspaceManager.h"
-#include "WorkspaceAllocator.h"
+#include "WorkspaceLibrary.h"
+#include "AppManager.h"
 #include "omegaToolkit/UiScriptCommand.h"
 #include "omega/MissionControl.h"
 
@@ -10,7 +10,7 @@ void AppInfo::initialize(AppLauncher* drawer)
 {
     myDrawer = drawer;
 
-    command = "%orun -D - -c %cfg -s %file -N %appname -I %appid --mc @%mchost:%mcport";
+    command = "%orun %env -D - -s %file -N %appname -I %appid --mc @%mchost:%mcport";
 
     myUi = myDrawer->getUi();
     WidgetFactory* wf = myUi->getWidgetFactory();
@@ -80,14 +80,14 @@ void AppInfo::InstanceInfo::handleEvent(const Event& evt)
 {
     if(uiRestoreButton->isButtonDown(evt, UiModule::getClickButton()))
     {
-        WorkspaceAllocator* wa = WorkspaceAllocator::instance();
+        AppManager* wa = AppManager::instance();
         // Get a new workspace for this application.
         const Vector3f& pos = evt.getPosition();
-        Workspace* w = wa->findFreeWorkspace(pos[0], pos[1]);
-        if(w != NULL)
-        {
-            wa->requestWorkspace(id, w->getLayout()->getName(), w->getName());
-        }
+        //Workspace* w = wa->findFreeWorkspace(pos[0], pos[1]);
+        //if(w != NULL)
+        //{
+        //    wa->requestWorkspace(id, w->getLayout()->getName(), w->getName());
+        //}
     }
 }
 

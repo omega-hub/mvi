@@ -12,7 +12,7 @@ class WorkspaceLayout;
 ///////////////////////////////////////////////////////////////////////////////
 class Workspace : public ReferenceType
 {
-friend class WorkspaceAllocator;
+friend class AppManager;
 public:
     // Public fields (accessible from python)
     String onActivated;
@@ -34,11 +34,11 @@ public:
     //! If activation succeeds (i.e. the workspace area is not allocated to
     //! other applications), the workspace will be activated at a later time
     //! Immediately activates the workspace.
-    void requestActivation();
+    //void requestActivation();
 
-    void activate();
+    //void activate();
     //! Immediately deactivated the workspace.
-    void deactivate();
+    //void deactivate();
 
     bool containsTile(DisplayTileConfig*);
 

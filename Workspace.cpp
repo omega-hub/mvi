@@ -1,5 +1,5 @@
 #include "Workspace.h"
-#include "WorkspaceManager.h"
+#include "WorkspaceLibrary.h"
 
 #include <omegaToolkit.h>
 
@@ -38,38 +38,38 @@ void Workspace::setTiles(const String& tiles)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void Workspace::requestActivation()
-{
-    WorkspaceManager* wm = myLayout->getWorkspaceManager();
-    wm->requestWorkspace(myLayout->getName(), myName);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void Workspace::activate()
-{
-    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-    DisplayConfig& dcfg = ds->getDisplayConfig();
-
-    dcfg.setCanvasRect(myRect);
-
-    // First disable all tiles
-    //foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = false;
-
-    // The enable tiles in this workspace.
-    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = true;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void Workspace::deactivate()
-{
-    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-    DisplayConfig& dcfg = ds->getDisplayConfig();
-
-    dcfg.setCanvasRect(Rect(0, 0, 0, 0));
-
-    // DIsable tiles in this workspace.
-    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = false;
-}
+//void Workspace::requestActivation()
+//{
+//    WorkspaceLibrary* wm = myLayout->getWorkspaceLibrary();
+//    wm->requestWorkspace(myLayout->getName(), myName);
+//}
+//
+/////////////////////////////////////////////////////////////////////////////////
+//void Workspace::activate()
+//{
+//    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+//    DisplayConfig& dcfg = ds->getDisplayConfig();
+//
+//    dcfg.setCanvasRect(myRect);
+//
+//    // First disable all tiles
+//    //foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = false;
+//
+//    // The enable tiles in this workspace.
+//    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = true;
+//}
+//
+/////////////////////////////////////////////////////////////////////////////////
+//void Workspace::deactivate()
+//{
+//    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+//    DisplayConfig& dcfg = ds->getDisplayConfig();
+//
+//    dcfg.setCanvasRect(Rect(0, 0, 0, 0));
+//
+//    // DIsable tiles in this workspace.
+//    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = false;
+//}
 
 ///////////////////////////////////////////////////////////////////////////////
 bool Workspace::containsTile(DisplayTileConfig* tile)

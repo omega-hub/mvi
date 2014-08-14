@@ -6,7 +6,7 @@ using namespace omegaToolkit;
 using namespace omegaToolkit::ui;
 
 ///////////////////////////////////////////////////////////////////////////////
-WorkspaceLayout::WorkspaceLayout(const String& name, WorkspaceManager* mgr) :
+WorkspaceLayout::WorkspaceLayout(const String& name, WorkspaceLibrary* mgr) :
 myName(name), myManager(mgr)
 {
 }
@@ -75,7 +75,7 @@ void WorkspaceLayout::createUi(Container* parent)
         b->setAutosize(false);
         b->setSize(iconSize);
         b->setUIEventCommand(ostr(
-            "WorkspaceManager.instance().requestWorkspace('%1%', '%2%')",
+            "WorkspaceLibrary.instance().requestWorkspace('%1%', '%2%')",
             %myName %i->getName()));
     }
 }

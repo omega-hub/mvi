@@ -10,7 +10,7 @@
 #include "omegaToolkit/ui/WidgetFactory.h"
 #include "omegaToolkit/ui/Widget.h"
 #include "omegaToolkit/UiScriptCommand.h"
-#include "WorkspaceManager.h"
+#include "WorkspaceLibrary.h"
 
 class AppLauncher;
 

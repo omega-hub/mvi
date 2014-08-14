@@ -10,9 +10,9 @@
 #include "omegaToolkit/ui/WidgetFactory.h"
 #include "omegaToolkit/ui/Widget.h"
 #include "omegaToolkit/UiScriptCommand.h"
-#include "WorkspaceManager.h"
+#include "WorkspaceLibrary.h"
 #include "AppInfo.h"
-#include "WorkspaceAllocator.h"
+#include "AppManager.h"
 
 class AppLauncher;
 
@@ -35,7 +35,7 @@ public:
     static AppLauncher* instance();
 
 public:
-    AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceManager* wm, WorkspaceAllocator* a);
+    AppLauncher(PythonInterpreter* interp, UiModule* ui, WorkspaceLibrary* wm, AppManager* a);
     virtual ~AppLauncher() {}
 
     void initialize();
@@ -72,7 +72,7 @@ private:
     int myIconSize;
 
     IAppLauncherListener* myListener;
-    Ref<WorkspaceManager> myWorkspaceManager;
-    Ref<WorkspaceAllocator> myWorkspaceAllocator;
+    Ref<WorkspaceLibrary> myWorkspaceLibrary;
+    Ref<AppManager> myAppManager;
 };
 #endif

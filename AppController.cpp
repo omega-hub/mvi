@@ -1,27 +1,45 @@
-#include "AppControlOverlay.h"
-#include "WorkspaceManager.h"
+#include "AppController.h"
+#include "WorkspaceLibrary.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-AppControlOverlay* AppControlOverlay::create()
+AppController* AppController::create()
 {
     PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
 
-    AppControlOverlay* ad = new AppControlOverlay(pi);
+    AppController* ad = new AppController(pi);
     ModuleServices::addModule(ad);
     return ad;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppControlOverlay::AppControlOverlay(PythonInterpreter* interp) :
+AppController::AppController(PythonInterpreter* interp) :
 myUi(NULL), myInterpreter(interp), myModifyingCanvas(false),
-myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero())
+myActiveUserId(-1),
+myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
+myModeSwitchButton(Event::Alt),
+myMoveButton(Event::Button1),
+myResizeButton(Event::Button2)
+
 {
     setPriority(EngineModule::PriorityHigh);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::initialize()
+void AppController::initialize()
 {
+    // Read config options
+    Config* cfg = SystemManager::instance()->getAppConfig();
+    if(cfg->exists("config/appController"))
+    {
+        Setting& s = cfg->lookup("config/appController");
+        String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
+        String sMoveButton = Config::getStringValue("moveButton", s, "");
+        String sResizeButton = Config::getStringValue("resizeButton", s, "");
+        if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
+        if(sMoveButton != "") myMoveButton = Event::parseButtonName(sMoveButton);
+        if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
+    }
+
     myUi = UiModule::createAndInitialize();
 
     //myDrawerScale = 1.0f;
@@ -71,10 +89,21 @@ void AppControlOverlay::initialize()
     }
 
     hide();
+
+    // Send our display size to the application manager.
+    MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
+    if(cli->isConnected() && cli->getName() != "server")
+    {
+        cli->postCommand(ostr(
+            "@server:"
+            "appmgr.setDisplaySize('%1%', %2%, %3%)",
+            %cli->getName()
+            %dc.displayResolution[0] %dc.displayResolution[1]));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::update(const UpdateContext& context)
+void AppController::update(const UpdateContext& context)
 {
     // Control canvas size/position if we are in canvas move/size mode.
     DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
@@ -85,13 +114,13 @@ void AppControlOverlay::update(const UpdateContext& context)
     {
         canvas.min += myPointerDelta;
         canvas.max += myPointerDelta;
-        dc.setCanvasRect(canvas);
+        setAppCanvas(canvas);
         myLastPointerPos -= myPointerDelta;
     }
     else if(mySizingCanvas)
     {
         canvas.max += myPointerDelta;
-        dc.setCanvasRect(canvas);
+        setAppCanvas(canvas);
         //ofmsg("Sizing: %1%", %myPointerDelta);
     }
 
@@ -105,8 +134,38 @@ void AppControlOverlay::update(const UpdateContext& context)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::handleEvent(const Event& evt)
+void AppController::handleEvent(const Event& evt)
 {
+    if(evt.isButtonDown(myModeSwitchButton))
+    {
+        // The mode switch button s also used to set the active user, so for
+        // instance we can start tracking the head of the user whose controller
+        // generated this event.
+        myActiveUserId = evt.getUserId();
+
+        myModifyingCanvas = true;
+    }
+    else if(evt.isButtonUp(myModeSwitchButton)) myModifyingCanvas = false;
+
+    // Head tracking management: if we get a mocap event whose id is the same
+    // as the user id and it is marked as tracking a head, we want to use this
+    // tracker as the head tracker for the application: change the event source
+    // if to the source id that the main camera uses for head tracking.
+    if(evt.getServiceType() == Service::Mocap && evt.getUserId() == myActiveUserId)
+    {
+        // By convention (as of omicron 3.0), if this mocap event has int extra data, 
+        // the first field is a joint id. This will not break with previous versions
+        // of omicron, but no joint data will be read here.
+        if(!evt.isExtraDataNull(0) && 
+            evt.getExtraDataType() == Event::ExtraDataIntArray &&
+            evt.getExtraDataInt(0) == Event::OMICRON_SKEL_HEAD)
+        {
+            Event& mutableEvent = const_cast<Event&>(evt);
+            int headTrackerId = getEngine()->getDefaultCamera()->getTrackerSourceId();
+            mutableEvent.resetSourceId(headTrackerId);
+        }
+    }
+
     // See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
     if(evt.getServiceType() == Service::Pointer)
     {
@@ -117,8 +176,19 @@ void AppControlOverlay::handleEvent(const Event& evt)
         {
             if(evt.getType() == Event::Down)
             {
-                if(evt.isFlagSet(Event::Left)) myMovingCanvas = true;
-                else if(evt.isFlagSet(Event::Right)) mySizingCanvas = true;
+                DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+                DisplayConfig& dc = ds->getDisplayConfig();
+
+                if(evt.isFlagSet(myMoveButton))
+                {
+                    myMovingCanvas = true;
+                    dc.bringToFront();
+                }
+                else if(evt.isFlagSet(myResizeButton))
+                {
+                    mySizingCanvas = true;
+                    dc.bringToFront();
+                }
 
             }
             else if(evt.getType() == Event::Up)
@@ -137,14 +207,15 @@ void AppControlOverlay::handleEvent(const Event& evt)
         myLastPointerPos = pos;
     }
 
-    if(evt.isKeyDown(KC_HOME))
-    {
-        myModifyingCanvas = !myModifyingCanvas;
+    //if(evt.isKeyDown(KC_HOME))
+    //{
+    //    myModifyingCanvas = !myModifyingCanvas;
 
-        if(myModifyingCanvas) show();
-        else hide();
-    }
-    else if(myModifyingCanvas && evt.getType() == Event::Down)
+    //    if(myModifyingCanvas) show();
+    //    else hide();
+    //}
+    //else
+    if(myModifyingCanvas && evt.getType() == Event::Down)
     {
         foreach(Shortcut* s, myShortcuts)
         {
@@ -153,7 +224,16 @@ void AppControlOverlay::handleEvent(const Event& evt)
                 // Activate a target workspace
                 if(s->target != NULL)
                 {
-                    s->target->requestActivation();
+                    if(s->target->onActivated != "")
+                    {
+                        PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
+                        pi->queueCommand(s->target->onActivated);
+                    }
+                    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+                    DisplayConfig& dc = ds->getDisplayConfig();
+                    dc.bringToFront();
+                    const Rect& r = s->target->getWorkspaceRect();
+                    setAppCanvas(r);
                 }
             }
         }
@@ -161,7 +241,7 @@ void AppControlOverlay::handleEvent(const Event& evt)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::show()
+void AppController::show()
 {
     myVisible = true;
     myBackground->setEnabled(false);
@@ -172,7 +252,7 @@ void AppControlOverlay::show()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::hide()
+void AppController::hide()
 {
     //omsg("Menu hide");
 
@@ -185,7 +265,7 @@ void AppControlOverlay::hide()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppControlOverlay::Shortcut* AppControlOverlay::getOrCreateSortcut(Event::Flags button)
+AppController::Shortcut* AppController::getOrCreateSortcut(Event::Flags button)
 {
     foreach(Shortcut* s, myShortcuts)
     {
@@ -198,10 +278,10 @@ AppControlOverlay::Shortcut* AppControlOverlay::getOrCreateSortcut(Event::Flags 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppControlOverlay::setShortcut(Event::Flags button, const String& target, const String& command)
+void AppController::setShortcut(Event::Flags button, const String& target, const String& command)
 {
     Shortcut* s = getOrCreateSortcut(button);
-    WorkspaceManager* wm = WorkspaceManager::instance();
+    WorkspaceLibrary* wm = WorkspaceLibrary::instance();
     if(wm != NULL)
     {
         Vector<String> args = StringUtils::split(target, " ");
@@ -218,4 +298,24 @@ void AppControlOverlay::setShortcut(Event::Flags button, const String& target, c
     }
 
     s->icon = ImageUtils::loadImage(target);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::setAppCanvas(const Rect& canvasRect)
+{
+    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+    DisplayConfig& dc = ds->getDisplayConfig();
+    Rect canvas = dc.getCanvasRect();
+    dc.setCanvasRect(canvasRect);
+
+    MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
+    if(cli->isConnected() && cli->getName() != "server")
+    {
+        cli->postCommand(ostr(
+            "@server:"
+            "AppManager.instance().onAppCanvasChange('%1%', %2%, %3%, %4%, %5%)",
+            %cli->getName() 
+            %canvasRect.x() %canvasRect.y()
+            %canvasRect.width() %canvasRect.height()));
+    }
 }
