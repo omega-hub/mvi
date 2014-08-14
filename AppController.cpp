@@ -21,7 +21,7 @@ myMoveButton(Event::Button1),
 myResizeButton(Event::Button2)
 
 {
-    setPriority(EngineModule::PriorityHigh);
+    setPriority(EngineModule::PriorityHighest);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,6 +33,7 @@ void AppController::initialize()
     {
         Setting& s = cfg->lookup("config/appController");
         String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
+        ofmsg("mode switch button %1%", %sModeSwitchButton);
         String sMoveButton = Config::getStringValue("moveButton", s, "");
         String sResizeButton = Config::getStringValue("resizeButton", s, "");
         if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
@@ -92,7 +93,7 @@ void AppController::initialize()
 
     // Send our display size to the application manager.
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
-    if(cli->isConnected() && cli->getName() != "server")
+    if(cli != NULL && cli->isConnected() && cli->getName() != "server")
     {
         cli->postCommand(ostr(
             "@server:"
@@ -115,7 +116,9 @@ void AppController::update(const UpdateContext& context)
         canvas.min += myPointerDelta;
         canvas.max += myPointerDelta;
         setAppCanvas(canvas);
-        myLastPointerPos -= myPointerDelta;
+        
+        // THIS LINE NEEDED FOR LOCAL POINTERS
+        //myLastPointerPos -= myPointerDelta;
     }
     else if(mySizingCanvas)
     {
@@ -142,10 +145,12 @@ void AppController::handleEvent(const Event& evt)
         // instance we can start tracking the head of the user whose controller
         // generated this event.
         myActiveUserId = evt.getUserId();
-
         myModifyingCanvas = true;
     }
-    else if(evt.isButtonUp(myModeSwitchButton)) myModifyingCanvas = false;
+    else if(evt.isButtonUp(myModeSwitchButton))
+    {
+    myModifyingCanvas = false;
+    }
 
     // Head tracking management: if we get a mocap event whose id is the same
     // as the user id and it is marked as tracking a head, we want to use this
@@ -167,10 +172,21 @@ void AppController::handleEvent(const Event& evt)
     }
 
     // See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
-    if(evt.getServiceType() == Service::Pointer)
+    if(evt.getServiceType() == Service::Pointer || 
+        evt.getServiceType() == Service::Wand)
     {
         const Vector3f& pos3 = evt.getPosition();
         Vector2i pos(pos3[0], pos3[1]);
+        
+        if(evt.getServiceType() == Service::Wand && 
+            !evt.isExtraDataNull(2) && !evt.isExtraDataNull(3))
+        {
+            DisplayConfig& dcfg = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
+            pos[0] = evt.getExtraDataFloat(2) * dcfg.displayResolution[0];
+            pos[1] = (1.0f - evt.getExtraDataFloat(3)) * dcfg.displayResolution[1];
+            ofmsg("pos: %1% %2%", 
+                %evt.getExtraDataFloat(2) %evt.getExtraDataFloat(3));
+        }
 
         if(myModifyingCanvas)
         {
@@ -309,7 +325,7 @@ void AppController::setAppCanvas(const Rect& canvasRect)
     dc.setCanvasRect(canvasRect);
 
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
-    if(cli->isConnected() && cli->getName() != "server")
+    if(cli != NULL && cli->isConnected() && cli->getName() != "server")
     {
         cli->postCommand(ostr(
             "@server:"
