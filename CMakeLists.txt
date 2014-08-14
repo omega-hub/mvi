@@ -14,10 +14,6 @@ add_library(${MODULE_NAME} MODULE
 	AppInfo.h
 	AppManager.cpp
 	AppManager.h
-	WandInputFilter.cpp
-	WandInputFilter.h
-	WandPointerSwitcher.cpp
-	WandPointerSwitcher.h
 	Workspace.cpp
 	Workspace.h
 	WorkspaceLayout.cpp

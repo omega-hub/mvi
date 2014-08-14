@@ -23,7 +23,7 @@ Workspace* WorkspaceLayout::createWorkspace(const String& name, const String& ic
 ///////////////////////////////////////////////////////////////////////////////
 Workspace* WorkspaceLayout::createWorkspace(const String& name, const String& icon, float x, float y, float w, float h)
 {
-    if(x <= 1 | y <= 1 | w <= 1 | h <= 1)
+    if(x <= 1 || y <= 1 || w <= 1 || h <= 1)
     {
         DisplayConfig& dc = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
         x *= dc.displayResolution[0];

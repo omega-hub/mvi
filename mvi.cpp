@@ -1,19 +1,7 @@
-#include "WandInputFilter.h"
-#include "WandPointerSwitcher.h"
 #include "WorkspaceLibrary.h"
 #include "AppManager.h"
 #include "AppLauncher.h"
 #include "AppController.h"
-
-///////////////////////////////////////////////////////////////////////////////
-// Python API follows
-// this fuction registers the Wand Pointer Switcher service with the omicron
-// service manager
-void setup()
-{
-    ServiceManager* sm = SystemManager::instance()->getServiceManager();
-    sm->registerService("WandPointerSwitcher", (ServiceAllocator)WandPointerSwitcher::New);
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Python wrapper code.
@@ -23,10 +11,6 @@ void setup()
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AppController_setShortcut, setShortcut, 2, 3)
 BOOST_PYTHON_MODULE(mvi)
 {
-    PYAPI_REF_BASE_CLASS(WandInputFilter)
-        PYAPI_STATIC_REF_GETTER(WandInputFilter, createAndInitialize)
-        ;
-
     PYAPI_REF_BASE_CLASS(WorkspaceLibrary)
         PYAPI_STATIC_REF_GETTER(WorkspaceLibrary, create)
         PYAPI_STATIC_REF_GETTER(WorkspaceLibrary, instance)
@@ -87,7 +71,5 @@ BOOST_PYTHON_MODULE(mvi)
         PYAPI_STATIC_REF_GETTER(AppController, create)
         .def("setShortcut", &AppController::setShortcut, AppController_setShortcut())
         ;
-
-    def("setup", setup);
 }
 #endif
