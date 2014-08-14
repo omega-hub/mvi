@@ -1,3 +1,5 @@
+#include <omega/MouseService.h>
+
 #include "AppController.h"
 #include "WorkspaceLibrary.h"
 
@@ -18,8 +20,8 @@ myActiveUserId(-1),
 myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
 myModeSwitchButton(Event::Alt),
 myMoveButton(Event::Button1),
-myResizeButton(Event::Button2)
-
+myResizeButton(Event::Button2),
+myUsingLocalPointer(false)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -33,7 +35,6 @@ void AppController::initialize()
     {
         Setting& s = cfg->lookup("config/appController");
         String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
-        ofmsg("mode switch button %1%", %sModeSwitchButton);
         String sMoveButton = Config::getStringValue("moveButton", s, "");
         String sResizeButton = Config::getStringValue("resizeButton", s, "");
         if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
@@ -117,8 +118,13 @@ void AppController::update(const UpdateContext& context)
         canvas.max += myPointerDelta;
         setAppCanvas(canvas);
         
-        // THIS LINE NEEDED FOR LOCAL POINTERS
-        //myLastPointerPos -= myPointerDelta;
+        // When set to true, pointer events controlling the window are happening on
+        // the window itself. This flag is needed to apply pointer delta correction
+        // after window is moved.
+        if(myUsingLocalPointer)
+        {
+            myLastPointerPos -= myPointerDelta;
+        }
     }
     else if(mySizingCanvas)
     {
@@ -149,7 +155,7 @@ void AppController::handleEvent(const Event& evt)
     }
     else if(evt.isButtonUp(myModeSwitchButton))
     {
-    myModifyingCanvas = false;
+        myModifyingCanvas = false;
     }
 
     // Head tracking management: if we get a mocap event whose id is the same
@@ -184,14 +190,25 @@ void AppController::handleEvent(const Event& evt)
             DisplayConfig& dcfg = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
             pos[0] = evt.getExtraDataFloat(2) * dcfg.displayResolution[0];
             pos[1] = (1.0f - evt.getExtraDataFloat(3)) * dcfg.displayResolution[1];
-            ofmsg("pos: %1% %2%", 
-                %evt.getExtraDataFloat(2) %evt.getExtraDataFloat(3));
+            //ofmsg("pos: %1% %2%", 
+            //    %evt.getExtraDataFloat(2) %evt.getExtraDataFloat(3));
         }
 
         if(myModifyingCanvas)
         {
             if(evt.getType() == Event::Down)
             {
+                // When set to true, pointer events controlling the window are happening on
+                // the window itself. This flag is needed to apply pointer delta correction
+                // after window is moved.
+                if(MouseService::instance() != NULL)
+                {
+                    if(evt.isFrom(MouseService::instance(), 0))
+                    {
+                        myUsingLocalPointer = true;
+                    }
+                }
+
                 DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
                 DisplayConfig& dc = ds->getDisplayConfig();
 
@@ -211,6 +228,7 @@ void AppController::handleEvent(const Event& evt)
             {
                 mySizingCanvas = false;
                 myMovingCanvas = false;
+                myUsingLocalPointer = false;
             }
 
             if(mySizingCanvas || myMovingCanvas)

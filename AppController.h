@@ -78,6 +78,10 @@ private:
     Event::Flags myMoveButton;
     Event::Flags myResizeButton;
 
+    // When set to true, pointer events controlling the window are happening on
+    // the window itself. This flag is needed to apply pointer delta correction
+    // after window is moved.
+    bool myUsingLocalPointer;
     bool myModifyingCanvas;
     bool myMovingCanvas;
     bool mySizingCanvas;
