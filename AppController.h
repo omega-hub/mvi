@@ -60,6 +60,7 @@ private:
 private:
     Ref<UiModule> myUi;
     
+    int myBorderSize;
     Ref<Container> myContainer;
     Ref<Container> myBackground;
     Ref<Button> myMinimizeButton;

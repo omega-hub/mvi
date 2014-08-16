@@ -6,6 +6,12 @@ using namespace omega;
 // Stored data about a single application instance.
 struct AppInstance : public ReferenceType
 {
+    AppInstance():
+        targetCanvas(0,0,0,0),
+        currentCanvas(0,0,0,0),
+        z(0),
+        dirtyCanvas(false) {}
+        
     String id;
     Rect targetCanvas;
     Rect currentCanvas;
@@ -14,18 +20,39 @@ struct AppInstance : public ReferenceType
     Ref<MissionControlConnection> connection;
 };
 
+// Information about input data coming from a specific user
+struct InputInfo: ReferenceType
+{
+    InputInfo():
+        controlMode(false), lockedMode(false) {}
+        
+    // When set to true input from this user is in control mode
+    // i.e. user is controlling layout instead of sending input to a specific app
+    bool controlMode;
+    // When set to true, we are in control mode and "locked-on" on a single
+    // application, moving or resizing its canvas. when this flag is set, events
+    // will be forwarded to this app regardless of where the pointer is, to avoid
+    // losing control of the app if we are moving the pointer too fast or out
+    // of bounds.
+    bool lockedMode;
+    
+    // Target application for this input source;
+    Ref<AppInstance> target;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Some useful typedefs.
 typedef Dictionary<String, Ref<AppInstance> > AppInstanceDictionary;
 typedef Dictionary<uint, Ref<MissionControlConnection> > EventRoutingTable;
+typedef Dictionary<uint, Ref<InputInfo> > InputInfoTable;
 
 ///////////////////////////////////////////////////////////////////////////////
-class ApplicationManager : public EngineModule, public IMissionControlListener
+class AppManager : public EngineModule, public IMissionControlListener
 {
 public:
-    static ApplicationManager* instance();
+    static AppManager* instance();
 
-    ApplicationManager();
+    AppManager();
     void initialize();
     void handleEvent(const Event& evt);
 
@@ -33,12 +60,19 @@ public:
     void onClientConnected(const String& clientId);
     void onClientDisconnected(const String& clientId);
     bool handleCommand(const String& cmd);
-
+    
     // Called by connected clients
     void setDisplaySize(const String& clientid, int width, int height);
+    void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
 
 private:
-    static ApplicationManager* mysInstance;
+    // Get a 2D pointer out of a pointer or wand event
+    bool get2DPointer(const Event& evt, Vector2i& out);
+    InputInfo* getOrCreateInputInfo(const Event& evt);
+    AppInstance* getAppAt(Vector2i pos);
+    
+private:
+    static AppManager* mysInstance;
 
     SystemManager* mySys;
 
@@ -47,8 +81,10 @@ private:
 
     EventRoutingTable myEventRoutingTable;
 
-    Event::Flags myAquireInputButton;
-    Event::Flags myExclusiveInputButton;
+    Event::Flags myModeSwitchButton;
+    Event::Flags myMoveButton;
+    Event::Flags myResizeButton;
+    InputInfoTable myInputInfoTable;
 
     // Pixel size of the connected display
     Vector2i myDisplaySize;
@@ -67,41 +103,46 @@ BOOST_PYTHON_MODULE(appmgr)
 {
     // The python API is mainly used to support communication with connected
     // clients through Mission Control.
-    PYAPI_REF_BASE_CLASS(ApplicationManager)
-        PYAPI_STATIC_REF_GETTER(ApplicationManager, instance)
-        PYAPI_METHOD(ApplicationManager, setDisplaySize)
+    PYAPI_REF_BASE_CLASS(AppManager)
+        PYAPI_STATIC_REF_GETTER(AppManager, instance)
+        PYAPI_METHOD(AppManager, setDisplaySize)
+        PYAPI_METHOD(AppManager, onAppCanvasChange)
         ;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-ApplicationManager* ApplicationManager::mysInstance = NULL;
-ApplicationManager* ApplicationManager::instance()
+AppManager* AppManager::mysInstance = NULL;
+AppManager* AppManager::instance()
 { 
     return mysInstance; 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ApplicationManager::ApplicationManager(): 
-    EngineModule("ApplicationManager"),
+AppManager::AppManager(): 
+    EngineModule("AppManager"),
     mySys(SystemManager::instance()),
-    myAquireInputButton(Event::Button1)
+    myModeSwitchButton(Event::Alt),
+    myMoveButton(Event::Button1),
+    myResizeButton(Event::Button2)
 {
     mysInstance = this;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ApplicationManager::initialize()
+void AppManager::initialize()
 {
     // Read in configuration
     Config* cfg = SystemManager::instance()->getAppConfig();
     if(cfg->exists("config/appmgr"))
     {
         Setting& s = cfg->lookup("config/appmgr");
-        String aquireInputButtonName = Config::getStringValue("aquireInputButton", s, "Button1");
-        myAquireInputButton = Event::parseButtonName(aquireInputButtonName);
-        String exclusiveInputButtonName = Config::getStringValue("exclusiveInputButton", s, "Button2");
-        myExclusiveInputButton = Event::parseButtonName(exclusiveInputButtonName);
+        String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
+        String sMoveButton = Config::getStringValue("moveButton", s, "");
+        String sResizeButton = Config::getStringValue("resizeButton", s, "");
+        if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
+        if(sMoveButton != "") myMoveButton = Event::parseButtonName(sMoveButton);
+        if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
     }
 
     myServer = mySys->getMissionControlServer();
@@ -123,57 +164,181 @@ void ApplicationManager::initialize()
     interpreter->eval("porthole.initialize('mvi/appmgr/pointer.xml')");
 
     // Initialize python API and create a variable 'appmgr' storing the
-    // ApplicationManager instance
+    // AppManager instance
     initappmgr();
     interpreter->eval("from appmgr import *");
-    interpreter->eval("appmgr = ApplicationManager.instance()");
+    interpreter->eval("appmgr = AppManager.instance()");
 
 
     omsg("Application Manager initialization complete!");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ApplicationManager::onClientConnected(const String& clientId)
+void AppManager::onClientConnected(const String& clientId)
 {
-    // Don't create app controller here - layout script takes care of that.
+    ofmsg("Application connected: %1%", %clientId);
+    // New client connected: setup a new AppInstance.
+    MissionControlConnection* conn = myServer->findConnection(clientId);
+    
+    AppInstance* ai = new AppInstance();
+    ai->id = clientId;
+    ai->connection = conn;
+    
+    myAppInstances[clientId] = ai;
+    myZSortedAppInstances.push_front(ai);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ApplicationManager::onClientDisconnected(const String& clientId)
+void AppManager::onClientDisconnected(const String& clientId)
 {
-
+    ofmsg("Application disconnected: %1%", %clientId);
+    
+    AppInstance* ai = myAppInstances[clientId];
+    myZSortedAppInstances.remove(ai);
+    myAppInstances[clientId] = NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ApplicationManager::setDisplaySize(const String& clientid, int width, int height)
+void AppManager::setDisplaySize(const String& clientid, int width, int height)
 {
     myDisplaySize = Vector2i(width, height);
     ofmsg("Display size set to %1%", %myDisplaySize);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ApplicationManager::handleEvent(const Event& evt)
+void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int h)
 {
-    // If event has aquire button pressed:
-    // - get event user id. If there is an entry in routing table, send event
-    // to that app.
-    // ELSE
-    // if event is a pointer or wand event
-    // - obtain 2D coords
-    // get application pointed at (use new getAppAt(Vector2i) method, also
-    // add AppInstance/AppInstanceDictionary code from AppManager (add MissionControlConnection to AppInstance)
-    // add Application to event routing table with userId of event.
-    // if event is not a pointer or wand
-    // just look in routing table and send event to relative app.
-    // if there are special apps (ie. apps that receive all events) send events
-    // to those apps as well.
-    // Simple version: forward all events to all clients.
-    myServer->broadcastEvent(evt, myServerConnection);
-    ofmsg("Sending%1%", %evt.getPosition());
+    AppInstance* ai = myAppInstances[appid];
+    oassert(ai != NULL);
+    
+    ai->targetCanvas = Rect(x, y, w, h);
+    ai->currentCanvas = Rect(x, y, w, h);
+
+    // TODO: Update other app canvases here.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-bool ApplicationManager::handleCommand(const String& cmd)
+InputInfo* AppManager::getOrCreateInputInfo(const Event& evt)
+{
+    InputInfo* ii = NULL;
+    // If we do not have an entry from this user in the input info table,
+    // create it now.
+    if(myInputInfoTable.find(evt.getUserId()) == myInputInfoTable.end())
+    {
+        ii = new InputInfo();
+        myInputInfoTable[evt.getUserId()] = ii;
+    }
+    else
+    {
+        ii = myInputInfoTable[evt.getUserId()];
+    }
+    return ii;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool AppManager::get2DPointer(const Event& evt, Vector2i& out)
+{
+    const Vector3f& pos3 = evt.getPosition();
+    out[0] = pos3[0];
+    out[1] = pos3[1];
+    
+    if(evt.getServiceType() == Service::Wand && 
+        !evt.isExtraDataNull(2) && !evt.isExtraDataNull(3))
+    {
+        out[0] = evt.getExtraDataFloat(2) * myDisplaySize[0];
+        out[1] = evt.getExtraDataFloat(3) * myDisplaySize[1];
+    }
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+AppInstance* AppManager::getAppAt(Vector2i pos)
+{
+    // Find which app contains this pointer.
+    foreach(AppInstance* ai, myZSortedAppInstances)
+    {
+        Rect& cc = ai->currentCanvas;
+        if(pos[0] >= cc.min[0] && pos[0] < cc.max[0] && 
+            pos[1] >= cc.min[1] && pos[1] <= cc.max[1])
+        {
+            return ai;
+        }
+    }
+    return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::handleEvent(const Event& evt)
+{
+    if(evt.getServiceType() == Service::Pointer || 
+        evt.getServiceType() == Service::Wand)
+    {
+        InputInfo* ii = getOrCreateInputInfo(evt);
+        
+        if(evt.isButtonDown(myModeSwitchButton))
+        {
+            ii->controlMode = true;
+        }
+        else if(evt.isButtonUp(myModeSwitchButton))
+        {
+            ii->controlMode = false;
+            ii->lockedMode = false;
+            myServer->broadcastEvent(evt, myServerConnection);
+        }
+        
+        if(ii->controlMode)
+        {
+            Vector2i pos;
+            get2DPointer(evt, pos);
+            
+            if(evt.isButtonDown(myMoveButton) || evt.isButtonDown(myResizeButton))
+            {
+                // Go in locked-on mode: find which application we are pointing at.
+                ii->lockedMode = true;
+                AppInstance* ai = getAppAt(pos);
+                if(ai != NULL) ii->target = ai;
+            }
+            else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
+            {
+                ii->lockedMode = false;
+                myServer->broadcastEvent(evt, myServerConnection);
+            }
+            
+            AppInstance* ai = ii->target;
+            if(!ii->lockedMode || ai == NULL)
+            {
+                ai = getAppAt(pos);
+            }
+            
+            // Send pointer event to identfied target app
+            if(ai != NULL)
+            {
+                Rect& cc = ai->currentCanvas;
+                pos[0] -= cc.min[0];
+                pos[1] -= cc.min[1];
+                
+                // Convert the event to a pointer event with the set position.
+                Event& mutableEvent = const_cast<Event&>(evt);
+                mutableEvent.setServiceType(Service::Pointer);
+                mutableEvent.setPosition(pos[0], pos[1], 0);
+                myServer->sendEventTo(evt, ai->connection);
+            }
+        }
+        else
+        {
+            // We have a wand or pointer event and we are not in control mode:
+            // send the event to the application registered to this event user
+            if(ii->target != NULL) myServer->sendEventTo(evt, ii->target->connection);
+        }
+    }
+    else
+    {
+        myServer->broadcastEvent(evt, myServerConnection);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool AppManager::handleCommand(const String& cmd)
 {
     // :q exits app.
     if(cmd == "q") mySys->postExitRequest();
@@ -186,6 +351,6 @@ int main(int argc, char** argv)
 {
     // This app name will make app use /mvi/appmgr/appmgr.cfg as the default
     // config file.
-    Application<ApplicationManager> app("mvi/appmgr/appmgr");
+    Application<AppManager> app("mvi/appmgr/appmgr");
     return omain(app, argc, argv);
 }

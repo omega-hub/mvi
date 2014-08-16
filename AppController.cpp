@@ -22,7 +22,8 @@ myModeSwitchButton(Event::Alt),
 myMoveButton(Event::Button1),
 myResizeButton(Event::Button2),
 myUsingLocalPointer(false),
-myShowOverlay(false)
+myShowOverlay(false),
+myBorderSize(2)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -43,13 +44,16 @@ void AppController::initialize()
         if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
         
         myShowOverlay = Config::getBoolValue("showOverlay", s, false);
+        
+        myBorderSize = Config::getIntValue("borderSize", s, 2);
+        myBorderSize *= Platform::scale;
     }
 
     myUi = UiModule::createAndInitialize();
 
     //myDrawerScale = 1.0f;
-    myIconSize = 24;
-    int margin = 10;
+    myIconSize = 24 * Platform::scale / 2;
+    int margin = 10 * Platform::scale / 2;
 
     myBackground = Container::create(Container::LayoutFree, myUi->getUi());
     myBackground->setLayer(Widget::Front);
@@ -104,6 +108,12 @@ void AppController::initialize()
             "appmgr.setDisplaySize('%1%', %2%, %3%)",
             %cli->getName()
             %dc.displayResolution[0] %dc.displayResolution[1]));
+        
+        // Also do an initial setAppCanvas to let the server know our canvas information
+        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+        DisplayConfig& dc = ds->getDisplayConfig();
+        Rect canvas = dc.getCanvasRect();
+        setAppCanvas(canvas);
     }
 }
 
@@ -119,7 +129,7 @@ void AppController::update(const UpdateContext& context)
     {
         canvas.min += myPointerDelta;
         canvas.max += myPointerDelta;
-        setAppCanvas(canvas);
+        dc.setCanvasRect(canvas);
         
         // When set to true, pointer events controlling the window are happening on
         // the window itself. This flag is needed to apply pointer delta correction
@@ -132,7 +142,7 @@ void AppController::update(const UpdateContext& context)
     else if(mySizingCanvas)
     {
         canvas.max += myPointerDelta;
-        setAppCanvas(canvas);
+        dc.setCanvasRect(canvas);
         //ofmsg("Sizing: %1%", %myPointerDelta);
     }
 
@@ -156,11 +166,25 @@ void AppController::handleEvent(const Event& evt)
         myActiveUserId = evt.getUserId();
         myModifyingCanvas = true;
         if(myShowOverlay) show();
+        
+        // Make sure pointer drawing is enabled.
+        getEngine()->setDrawPointers(true);
     }
     else if(evt.isButtonUp(myModeSwitchButton))
     {
         myModifyingCanvas = false;
+        myMovingCanvas = false;
+        mySizingCanvas = false;
         if(myShowOverlay) hide();
+        
+        // Bit of a hack: if we are not in control mode, disable pointer drawing
+        getEngine()->setDrawPointers(false);
+        
+        // Done modifying canvas: send canvas update
+        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+        DisplayConfig& dc = ds->getDisplayConfig();
+        Rect canvas = dc.getCanvasRect();
+        setAppCanvas(canvas);
     }
 
     // Head tracking management: if we get a mocap event whose id is the same
@@ -188,16 +212,6 @@ void AppController::handleEvent(const Event& evt)
     {
         const Vector3f& pos3 = evt.getPosition();
         Vector2i pos(pos3[0], pos3[1]);
-        
-        if(evt.getServiceType() == Service::Wand && 
-            !evt.isExtraDataNull(2) && !evt.isExtraDataNull(3))
-        {
-            DisplayConfig& dcfg = SystemManager::instance()->getDisplaySystem()->getDisplayConfig();
-            pos[0] = evt.getExtraDataFloat(2) * dcfg.displayResolution[0];
-            pos[1] = evt.getExtraDataFloat(3) * dcfg.displayResolution[1];
-            //ofmsg("pos: %1% %2%", 
-            //    %evt.getExtraDataFloat(2) %evt.getExtraDataFloat(3));
-        }
 
         if(myModifyingCanvas)
         {
@@ -221,11 +235,19 @@ void AppController::handleEvent(const Event& evt)
                 {
                     myMovingCanvas = true;
                     dc.bringToFront();
+                    
+                    // Don't draw pointers while we move / resize the canvas.
+                    // Since they will look to be drifting 
+                    getEngine()->setDrawPointers(false);
                 }
                 else if(evt.isFlagSet(myResizeButton))
                 {
                     mySizingCanvas = true;
                     dc.bringToFront();
+
+                    // Don't draw pointers while we move / resize the canvas.
+                    // Since they will look to be drifting 
+                    getEngine()->setDrawPointers(false);
                 }
 
             }
@@ -234,6 +256,14 @@ void AppController::handleEvent(const Event& evt)
                 mySizingCanvas = false;
                 myMovingCanvas = false;
                 myUsingLocalPointer = false;
+                
+                // Done modifying canvas: send canvas update
+                DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+                DisplayConfig& dc = ds->getDisplayConfig();
+                Rect canvas = dc.getCanvasRect();
+                setAppCanvas(canvas);
+                
+                getEngine()->setDrawPointers(true);
             }
 
             if(mySizingCanvas || myMovingCanvas)
@@ -246,14 +276,6 @@ void AppController::handleEvent(const Event& evt)
         myLastPointerPos = pos;
     }
 
-    //if(evt.isKeyDown(KC_HOME))
-    //{
-    //    myModifyingCanvas = !myModifyingCanvas;
-
-    //    if(myModifyingCanvas) show();
-    //    else hide();
-    //}
-    //else
     if(myModifyingCanvas && evt.getType() == Event::Down)
     {
         foreach(Shortcut* s, myShortcuts)
@@ -287,20 +309,18 @@ void AppController::show()
     myBackground->setVisible(true);
 
     Container* root = myBackground->getContainer();
-    root->setStyleValue("border", "2 #FFB638");
+    root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::hide()
 {
-    //omsg("Menu hide");
-
     myVisible = false;
     myBackground->setEnabled(false);
     myBackground->setVisible(false);
 
     Container* root = myBackground->getContainer();
-    root->setStyleValue("border", "1 #D119FF");
+    root->setStyleValue("border", ostr("%1% #D119FF", %myBorderSize));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -344,7 +364,6 @@ void AppController::setAppCanvas(const Rect& canvasRect)
 {
     DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
     DisplayConfig& dc = ds->getDisplayConfig();
-    Rect canvas = dc.getCanvasRect();
     dc.setCanvasRect(canvasRect);
 
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
@@ -352,7 +371,7 @@ void AppController::setAppCanvas(const Rect& canvasRect)
     {
         cli->postCommand(ostr(
             "@server:"
-            "AppManager.instance().onAppCanvasChange('%1%', %2%, %3%, %4%, %5%)",
+            "appmgr.onAppCanvasChange('%1%', %2%, %3%, %4%, %5%)",
             %cli->getName() 
             %canvasRect.x() %canvasRect.y()
             %canvasRect.width() %canvasRect.height()));
