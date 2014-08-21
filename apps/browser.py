@@ -11,6 +11,12 @@ frame = None
 draggable = False
 width = 0
 height = 0
+
+# Scale, max width, max height
+S = Platform.scale
+MW = 840
+MH = 480
+scale = S
     
 #-------------------------------------------------------------------------------
 def create(width, height):
@@ -54,9 +60,10 @@ def create(width, height):
         frame = Image.create(container)
         frame.setData(view)
         
+
     frame.setPosition(Vector2(5, titleBar.getHeight() + 5))
-    frame.setSizeAnchorEnabled(True)
-    frame.setSizeAnchor(Vector2(5, 5))
+    #frame.setSizeAnchorEnabled(True)
+    #frame.setSizeAnchor(Vector2(5, 5))
     container.requestLayoutRefresh()
     
     ImageBroadcastModule.instance().addChannel(view, 'browser', ImageFormat.FormatNone)
@@ -68,21 +75,42 @@ def loadUrl(url):
         view.loadUrl(url)
 
 #-------------------------------------------------------------------------------
+def rescale(newscale):
+    global scale
+    scale = newscale
+    resize(width - 5, height - 5 - titleBar.getHeight())
+    
+#-------------------------------------------------------------------------------
 def resize(width, height):
-    view.resize(width, height)
-    container.setSize(Vector2(width, height))
+    sw = float(width) / scale
+    sh = float(height) / scale
+    view.resize(int(sw), int(sh))
+    container.setSize(Vector2(sw, sh))
+    
+    ox = (width - sw) / 2
+    oy = (height - sh) / 2
+    frame.setSize(Vector2(sw, sh))
+    frame.setScale(scale)
+    frame.setPosition(Vector2(5 + ox, titleBar.getHeight() + 5 + oy))
     titleBar.setWidth(width)
 
 #-------------------------------------------------------------------------------
 def onCanvasChanged():
-    global width, height
+    global width, height, scale
     cr = getDisplayConfig().getCanvasRect()
     w = cr[2]
     h = cr[3]
     if(w != width or h != height):
+        if(w > MW or h > MH):
+            if(w > h):
+                scale = S * w / MW
+            else:
+                scale = S * h / MH
+        else:
+            scale = S
         width = w
         height = h
-        resize(w - 5, h - 5)
+        rescale(scale)
 getDisplayConfig().canvasChangedCommand = 'onCanvasChanged()'
     
 #-------------------------------------------------------------------------------
