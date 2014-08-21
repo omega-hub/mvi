@@ -69,6 +69,7 @@ BOOST_PYTHON_MODULE(mvi)
     // App drawer
     PYAPI_REF_BASE_CLASS(AppController)
         PYAPI_STATIC_REF_GETTER(AppController, create)
+        PYAPI_METHOD(AppController, setButton)
         .def("setShortcut", &AppController::setShortcut, AppController_setShortcut())
         ;
 }

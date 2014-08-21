@@ -28,6 +28,8 @@ target_link_libraries(${MODULE_NAME}
 	omegaToolkit)
     
 add_subdirectory(appmgr)
+add_subdirectory(desktop)
+add_subdirectory(applauncher)
 
 #------------------------------------------------------------------------------
 # DO NOT MODIFY ANYTHING BELOW AFTER THIS LINE

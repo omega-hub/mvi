@@ -1,6 +1,5 @@
 config:
 {
-    // Set the workspace configuration
 	systemConfig = "DEFAULT";
     initScript = "mvi/config/split2.py";
     appController:
@@ -9,6 +8,12 @@ config:
         //moveButton = "Button3";
         //resizeButton = "Button2";
         showOverlay = true;
+    };
+    app:
+    {
+        label = "Spin Cube";
+        icon="./icon.png";
+        group="Examples";
     };
     //services: {};
 };

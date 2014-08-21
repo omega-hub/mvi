@@ -46,14 +46,14 @@ void AppController::initialize()
         myShowOverlay = Config::getBoolValue("showOverlay", s, false);
         
         myBorderSize = Config::getIntValue("borderSize", s, 2);
-        myBorderSize *= Platform::scale;
+        myBorderSize *= Platform::scale * 2;
     }
 
     myUi = UiModule::createAndInitialize();
 
     //myDrawerScale = 1.0f;
-    myIconSize = 24 * Platform::scale / 2;
-    int margin = 10 * Platform::scale / 2;
+    myIconSize = 24 * Platform::scale;
+    int margin = 10 * Platform::scale;
 
     myBackground = Container::create(Container::LayoutFree, myUi->getUi());
     myBackground->setLayer(Widget::Front);
@@ -72,6 +72,17 @@ void AppController::initialize()
     myContainer->setStyleValue("border", "1 white");
     myContainer->setFillColor(Color::Black);
     myContainer->setFillEnabled(true);
+
+    myButtonContainer = Container::create(Container::LayoutHorizontal, myBackground);
+    myButtonContainer->setHorizontalAlign(Container::AlignRight);
+    //myButtonContainer->setPosition(Vector2f(5, margin + myIconSize));
+    myButtonContainer->setHeight(margin + myIconSize);
+    myButtonContainer->setAutosize(false);
+    myButtonContainer->setSizeAnchorEnabled(true);
+    myButtonContainer->setSizeAnchor(Vector2f(0, -1));
+    //myButtonContainer->setStyleValue("border", "1 green");
+    myButtonContainer->setFillColor(Color::Black);
+    myButtonContainer->setFillEnabled(true);
 
     Image* dpad = Image::create(myContainer);
     dpad->setData(ImageUtils::loadImage("mvi/icons/dpad.png"));
@@ -96,6 +107,8 @@ void AppController::initialize()
             else if(s->button == Event::ButtonDown) btn->setCenter(dpadCenter + Vector2f(0, dpadSize));
         }
     }
+
+    for(uint i = 0; i < 4; i++) updateButton(i);
 
     hide();
 
@@ -271,6 +284,8 @@ void AppController::handleEvent(const Event& evt)
                 myPointerDelta += pos - myLastPointerPos;
             }
 
+            myButtonContainer->handleEvent(evt);
+
             evt.setProcessed();
         }
         myLastPointerPos = pos;
@@ -357,6 +372,42 @@ void AppController::setShortcut(Event::Flags button, const String& target, const
     }
 
     s->icon = ImageUtils::loadImage(target);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::setButton(uint index, PixelData* icon, const String& command)
+{
+    if(index >= 4)
+    {
+        owarn("AppController::setButton: only 4 buttons can be set");
+        return;
+    }
+    myButtonCommands[index] = command;
+    myButtonIcons[index] = icon;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::updateButton(uint index)
+{
+    // No command for this button - nothing to do.
+    if(myButtonCommands[index].size() == 0) return;
+
+    Button* b = NULL;
+
+    if(myButtons[index] == NULL)
+    {
+        myButtons[index] = Button::create(myButtonContainer);
+    }
+
+    b = myButtons[index];
+    int margin = 10 * Platform::scale;
+    
+    b->setIcon(myButtonIcons[index]);
+    b->getImage()->setSize(Vector2f(myIconSize, myIconSize));
+    b->setTextEnabled(false);
+    b->setUIEventCommand(myButtonCommands[index]);
+    b->setActiveStyle("scale: 1.2; alpha: 1");
+    b->setInactiveStyle("scale: 1; alpha: 0.7");
 }
 
 ///////////////////////////////////////////////////////////////////////////////

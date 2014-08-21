@@ -64,6 +64,8 @@ public:
     // Called by connected clients
     void setDisplaySize(const String& clientid, int width, int height);
     void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
+    void setLauncherApp(const String& appid);
+    void setSystemApp(const String& appid);
 
 private:
     // Get a 2D pointer out of a pointer or wand event
@@ -91,6 +93,11 @@ private:
 
     // App instance data
     AppInstanceDictionary myAppInstances;
+    // Refs to special 'system' applications, typically launchers, system apps
+    // or desktop apps. They can be launched when in control mode pointing to
+    // an area where no other applications are active.
+    Ref<AppInstance> myLauncherApp;
+    Ref<AppInstance> mySystemApp;
 
     typedef List< Ref<AppInstance> > AppInstanceList;
     AppInstanceList myZSortedAppInstances;
@@ -218,6 +225,22 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void AppManager::setLauncherApp(const String& appid)
+{
+    AppInstance* ai = myAppInstances[appid];
+    oassert(ai != NULL);
+    myLauncherApp = ai;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::setSystemApp(const String& appid)
+{
+    AppInstance* ai = myAppInstances[appid];
+    oassert(ai != NULL);
+    mySystemApp = ai;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 InputInfo* AppManager::getOrCreateInputInfo(const Event& evt)
 {
     InputInfo* ii = NULL;
@@ -296,7 +319,30 @@ void AppManager::handleEvent(const Event& evt)
                 // Go in locked-on mode: find which application we are pointing at.
                 ii->lockedMode = true;
                 AppInstance* ai = getAppAt(pos);
-                if(ai != NULL) ii->target = ai;
+                if(ai != NULL)
+                {
+                    ii->target = ai;
+                }
+                else
+                {
+                    // We are in control locked down mode but we are not
+                    // pointing at any app. We treat these as special keys that
+                    // get forwarded to two special registered applications.
+                    // These apps typically work as app launchers / task managers.
+                    // Convert the event to a pointer event with the set position.
+                    Event& mutableEvent = const_cast<Event&>(evt);
+                    mutableEvent.setServiceType(Service::Pointer);
+                    mutableEvent.setPosition(pos[0], pos[1], 0);
+                    myServer->sendEventTo(evt, ai->connection);
+                    if(evt.isButtonDown(myMoveButton) && myLauncherApp != NULL)
+                    {
+                        myServer->sendEventTo(evt, myLauncherApp->connection);
+                    }
+                    else if(evt.isButtonDown(myResizeButton) && mySystemApp != NULL)
+                    {
+                        myServer->sendEventTo(evt, mySystemApp->connection);
+                    }
+                }
             }
             else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
             {

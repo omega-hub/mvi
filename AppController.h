@@ -43,8 +43,10 @@ public:
     void setIconSize(int value) { myIconSize = value; }
 
     void setShortcut(Event::Flags button, const String& target, const String& command = "");
+    void setButton(uint index, PixelData* icon, const String& command);
 
 private:
+    void updateButton(uint index);
     void setAppCanvas(const Rect& canvasRect);
 
     struct Shortcut : public ReferenceType
@@ -93,6 +95,12 @@ private:
 
     // Shortcuts
     List< Ref<Shortcut> > myShortcuts;
+
+    // Buttons
+    Ref<Container> myButtonContainer;
+    Ref<PixelData> myButtonIcons[4];
+    String myButtonCommands[4];
+    Ref<Button> myButtons[4];
 
     int myActiveUserId;
 };

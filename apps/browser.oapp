@@ -1,6 +1,5 @@
 config:
 {
-    // Set the workspace configuration
 	systemConfig = "DEFAULT";
     initScript = "mvi/config/split2.py";
     appController:
@@ -9,6 +8,22 @@ config:
         //moveButton = "Button3";
         //resizeButton = "Button2";
         showOverlay = true;
+    };
+	defaultFont:
+	{
+		filename = "fonts/arial.ttf";
+		size = 16;
+	};
+    app:
+    {
+        label = "Web Browser";
+        icon="./browser.png";
+        group="Utilities";
+    };
+    orun:
+    {
+        initScript="browser.py";
+        appStartFunction="";
     };
     //services: {};
 };

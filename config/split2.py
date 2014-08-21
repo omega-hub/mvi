@@ -14,3 +14,5 @@ ac.setShortcut(EventFlags.ButtonLeft, "split left")
 ac.setShortcut(EventFlags.ButtonRight, "split right")
 ac.setShortcut(EventFlags.ButtonUp, "center full")
 ac.setShortcut(EventFlags.ButtonDown, "split right")
+
+ac.setButton(0, loadImage('mvi/icons/close.png'), 'oexit()')
