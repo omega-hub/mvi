@@ -19,6 +19,7 @@ config:
         label = "Web Browser";
         icon="./browser.png";
         group="Utilities";
+        args = "-w 0,0,840,480";
     };
     orun:
     {

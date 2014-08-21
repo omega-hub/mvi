@@ -14,6 +14,7 @@ config:
         label = "Spin Cube";
         icon="./icon.png";
         group="Examples";
+        args = "-s cyclops/examples/python/spincube.py";
     };
     //services: {};
 };

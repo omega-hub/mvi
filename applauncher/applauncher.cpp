@@ -15,6 +15,7 @@ public:
     String id;
     String iconFile;
     String group;
+    String args;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,6 +40,9 @@ private:
     Dictionary<String, Ref<Menu> > myGroups;
 
     List< Ref<AppInfo> > myApps;
+
+    // Host:port of the app manager (if we are using one).
+    String myAppMgrHost;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -77,6 +81,7 @@ void AppLauncher::addApp(const String& appfile)
             ai->iconFile = Config::getStringValue("icon", s, "mvi/apps/icon.png");
             ai->group = Config::getStringValue("group", s, "root");
             ai->label = Config::getStringValue("label", s, cfg->getFilename());
+            ai->args = Config::getStringValue("args", s, "");
 
             // For the icon file, replace ./ with the.
             String cfgdir;
@@ -88,13 +93,24 @@ void AppLauncher::addApp(const String& appfile)
         }
         else
         {
-            ofwarn("%1%: missing app section, app will be ignored.");
+            ofwarn("%1%: missing app section, app will be ignored.", %appfile);
             return;
         }
 
+        String execpath = ogetexecpath();
+        String execname;
+        String execdir;
+        StringUtils::splitFilename(execpath, execname, execdir);
+        execdir = execdir + "orun";
+
         myApps.push_back(ai);
         Menu* mnu = getOrCreateGroup(ai->group);
-        MenuItem* mi = mnu->addButton(ai->label, "");
+
+        String cmd = ostr("olaunch('%1% %2% %3%')", %execdir %appfile %ai->args);
+
+        MenuItem* mi = mnu->addButton(
+            ai->label, 
+            cmd);
 
         // FOrce a layout to get the label size.
         mi->getButton()->getLabel()->autosize();
