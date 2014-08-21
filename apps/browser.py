@@ -13,9 +13,9 @@ width = 0
 height = 0
 
 # Scale, max width, max height
-S = Platform.scale
-MW = 840
-MH = 480
+S = 1 #Platform.scale
+MW = 1920
+MH = 1080
 scale = S
     
 #-------------------------------------------------------------------------------
@@ -65,7 +65,6 @@ def create(width, height):
     #frame.setSizeAnchorEnabled(True)
     #frame.setSizeAnchor(Vector2(5, 5))
     container.requestLayoutRefresh()
-    
     ImageBroadcastModule.instance().addChannel(view, 'browser', ImageFormat.FormatNone)
 
 #-------------------------------------------------------------------------------
@@ -85,7 +84,7 @@ def resize(width, height):
     sw = float(width) / scale
     sh = float(height) / scale
     view.resize(int(sw), int(sh))
-    container.setSize(Vector2(sw, sh))
+    container.setSize(Vector2(sw * scale, sh * scale))
     
     ox = (width - sw) / 2
     oy = (height - sh) / 2
@@ -93,6 +92,8 @@ def resize(width, height):
     frame.setScale(scale)
     frame.setPosition(Vector2(5 + ox, titleBar.getHeight() + 5 + oy))
     titleBar.setWidth(width)
+    print("width: " + str(width))
+    print("scale: " + str(scale))
 
 #-------------------------------------------------------------------------------
 def onCanvasChanged():

@@ -5,6 +5,8 @@ using namespace omega;
 using namespace omegaToolkit;
 using namespace omegaToolkit::ui;
 
+String sMcAddr;
+
 ///////////////////////////////////////////////////////////////////////////////
 struct AppInfo : public ReferenceType
 {
@@ -40,11 +42,20 @@ private:
     Dictionary<String, Ref<Menu> > myGroups;
 
     List< Ref<AppInfo> > myApps;
-
-    // Host:port of the app manager (if we are using one).
-    String myAppMgrHost;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Python script used to generate the application file list
+const char* listFilesFunction =
+    "import os\n" 
+    "def listFiles(scriptDir):\n" 
+    "   result = ''\n"
+    "   for root,dirs,files in os.walk(scriptDir):\n"
+    "      for f in files:\n"
+    "         if(f.endswith('.oapp')):\n"
+    "             result = result + root + '/' + f + ' '\n"
+    "   return result\n";
+    
 ///////////////////////////////////////////////////////////////////////////////
 PixelData* AppLauncher::getOrCreateIcon(const String& iconfile)
 {
@@ -105,8 +116,19 @@ void AppLauncher::addApp(const String& appfile)
 
         myApps.push_back(ai);
         Menu* mnu = getOrCreateGroup(ai->group);
+        
+        String mcarg = "";
+        if(sMcAddr != "") mcarg = "--mc " + sMcAddr;
 
-        String cmd = ostr("olaunch('%1% %2% %3%')", %execdir %appfile %ai->args);
+        String cmd = ostr("if(isMaster()): olaunch('%1% %2% %3% %4% -I %5%')", 
+            %execdir 
+            %appfile 
+            %ai->args
+            %mcarg
+            %myAppId
+            );
+            
+       myAppId++;
 
         MenuItem* mi = mnu->addButton(
             ai->label, 
@@ -138,9 +160,21 @@ void AppLauncher::initialize()
 
     myMenuManager->setMainMenu(m);
 
-    addApp("mvi/apps/spincube.oapp");
-    addApp("mvi/apps/browser.oapp");
-
+    // Run the python script to obtain the list of files in the script 
+    // directory.
+    char* fileList = NULL;
+    String cmd = ostr("listFiles('%1%/modules')", %ogetdataprefix());
+    PythonInterpreter* interpreter = SystemManager::instance()->getScriptInterpreter();
+    interpreter->eval(listFilesFunction);
+    interpreter->eval(cmd, "z", &fileList);
+    omsg(fileList);
+    Vector<String> fileVector = StringUtils::split(fileList, " ");
+    
+    foreach(String file, fileVector)
+    {
+        addApp(file);
+    }
+    
     SystemManager::instance()->getDisplaySystem()->setBackgroundColor(Color("black"));
 }
 
@@ -148,6 +182,11 @@ void AppLauncher::initialize()
 // ApplicationBase entry point
 int main(int argc, char** argv)
 {
+    // TODO: Capture the mission control (appmanager) address. Will be used when
+    // launching applications to make them connect to the same app manager.
+    // for now we set it manually
+    sMcAddr = "@localhost";
+    
     Application<AppLauncher> app("mvi/applauncher/applauncher");
     return omain(app, argc, argv);
 }
