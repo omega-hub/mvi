@@ -3,6 +3,18 @@
 #include "AppController.h"
 #include "WorkspaceLibrary.h"
 
+Event::Flags AppController::mysModeSwitchButton = Event::Alt;
+Event::Flags AppController::mysMoveButton = Event::Button1;
+Event::Flags AppController::mysResizeButton = Event::Button2;
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resize)
+{
+    mysModeSwitchButton = (Event::Flags)modeSwitch;
+    mysMoveButton = (Event::Flags)move;
+    mysResizeButton = (Event::Flags)resize;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 AppController* AppController::create()
 {
@@ -18,9 +30,6 @@ AppController::AppController(PythonInterpreter* interp) :
 myUi(NULL), myInterpreter(interp), myModifyingCanvas(false),
 myActiveUserId(-1),
 myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
-myModeSwitchButton(Event::Alt),
-myMoveButton(Event::Button1),
-myResizeButton(Event::Button2),
 myUsingLocalPointer(false),
 myShowOverlay(false),
 myBorderSize(2)
@@ -39,9 +48,9 @@ void AppController::initialize()
         String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
         String sMoveButton = Config::getStringValue("moveButton", s, "");
         String sResizeButton = Config::getStringValue("resizeButton", s, "");
-        if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
-        if(sMoveButton != "") myMoveButton = Event::parseButtonName(sMoveButton);
-        if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
+        if(sModeSwitchButton != "") mysModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
+        if(sMoveButton != "") mysMoveButton = Event::parseButtonName(sMoveButton);
+        if(sResizeButton != "") mysResizeButton = Event::parseButtonName(sResizeButton);
         
         myShowOverlay = Config::getBoolValue("showOverlay", s, false);
         
@@ -171,7 +180,7 @@ void AppController::update(const UpdateContext& context)
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::handleEvent(const Event& evt)
 {
-    if(evt.isButtonDown(myModeSwitchButton))
+    if(evt.isButtonDown(mysModeSwitchButton))
     {
         // The mode switch button s also used to set the active user, so for
         // instance we can start tracking the head of the user whose controller
@@ -183,7 +192,7 @@ void AppController::handleEvent(const Event& evt)
         // Make sure pointer drawing is enabled.
         getEngine()->setDrawPointers(true);
     }
-    else if(evt.isButtonUp(myModeSwitchButton))
+    else if(evt.isButtonUp(mysModeSwitchButton))
     {
         myModifyingCanvas = false;
         myMovingCanvas = false;
@@ -244,7 +253,7 @@ void AppController::handleEvent(const Event& evt)
                 DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
                 DisplayConfig& dc = ds->getDisplayConfig();
 
-                if(evt.isFlagSet(myMoveButton))
+                if(evt.isFlagSet(mysMoveButton))
                 {
                     myMovingCanvas = true;
                     dc.bringToFront();
@@ -253,7 +262,7 @@ void AppController::handleEvent(const Event& evt)
                     // Since they will look to be drifting 
                     getEngine()->setDrawPointers(false);
                 }
-                else if(evt.isFlagSet(myResizeButton))
+                else if(evt.isFlagSet(mysResizeButton))
                 {
                     mySizingCanvas = true;
                     dc.bringToFront();

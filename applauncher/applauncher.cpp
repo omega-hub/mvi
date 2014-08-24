@@ -21,7 +21,7 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-class AppLauncher : public EngineModule
+class AppLauncher: public EngineModule, public IMissionControlListener
 {
 public:
     AppLauncher() : EngineModule("AppLauncher") { }
@@ -31,6 +31,12 @@ private:
     void addApp(const String& appfile);
     PixelData* getOrCreateIcon(const String& iconfile);
     Menu*   getOrCreateGroup(const String& groupname);
+
+    void onClientConnected(const String& str);
+    void onClientDisconnected(const String& str);
+
+    void handleEvent(const Event& evt);
+    void update(const UpdateContext& ctx);
 
 private:
     unsigned int myAppId;
@@ -42,6 +48,10 @@ private:
     Dictionary<String, Ref<Menu> > myGroups;
 
     List< Ref<AppInfo> > myApps;
+
+    Ref<Button> myLaunchingItem;
+
+    Dictionary<int, String> myLaunchCommands;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,11 +138,12 @@ void AppLauncher::addApp(const String& appfile)
             %myAppId
             );
             
-       myAppId++;
+        myAppId++;
 
-        MenuItem* mi = mnu->addButton(
-            ai->label, 
-            cmd);
+        MenuItem* mi = mnu->addButton(ai->label, "");
+        mi->getWidget()->setUIEventHandler(this);
+        myLaunchCommands[mi->getWidget()->getId()] = cmd;
+
 
         // FOrce a layout to get the label size.
         mi->getButton()->getLabel()->autosize();
@@ -151,6 +162,11 @@ void AppLauncher::addApp(const String& appfile)
 void AppLauncher::initialize()
 {
     myAppId = 0;
+
+    // Register myself as a mission control listener
+    MissionControlClient* mcc = SystemManager::instance()->getMissionControlClient();
+    oassert(mcc);
+    mcc->setListener(this);
 
     myMenuManager = MenuManager::createAndInitialize();
     Menu* m = myMenuManager->createMenu("Root");
@@ -176,6 +192,48 @@ void AppLauncher::initialize()
     }
     
     SystemManager::instance()->getDisplaySystem()->setBackgroundColor(Color("black"));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppLauncher::handleEvent(const Event& evt)
+{
+    if(evt.getType() == Event::Click)
+    {
+        // Save the current button, so we can animate it while we wait for the 
+        // app to start.
+        myLaunchingItem = Widget::getSource<Button>(evt);
+        PythonInterpreter* i = SystemManager::instance()->getScriptInterpreter();
+
+        // Run the launch command for this button.
+        i->queueCommand(myLaunchCommands[myLaunchingItem->getId()]);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppLauncher::update(const UpdateContext& ctx)
+{
+    if(myLaunchingItem != NULL)
+    {
+        float ft = ctx.time;
+        myLaunchingItem->getImage()->setScale(1.0f + Math::abs(Math::sin(ft) * 0.3f));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppLauncher::onClientConnected(const String& str)
+{
+    if(myLaunchingItem != NULL)
+    {
+        // Just reset the launching item to stop its wait animation
+        myLaunchingItem->getImage()->setScale(1.0f);
+        myLaunchingItem = NULL;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppLauncher::onClientDisconnected(const String& str)
+{
+    // Nothing much to do here.
 }
 
 ///////////////////////////////////////////////////////////////////////////////

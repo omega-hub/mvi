@@ -1,6 +1,4 @@
 #include "WorkspaceLibrary.h"
-#include "AppManager.h"
-#include "AppLauncher.h"
 #include "AppController.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -18,14 +16,6 @@ BOOST_PYTHON_MODULE(mvi)
         PYAPI_REF_GETTER(WorkspaceLibrary, findLayout)
         ;
 
-    PYAPI_REF_BASE_CLASS(AppManager)
-        PYAPI_STATIC_REF_GETTER(AppManager, instance)
-        PYAPI_STATIC_REF_GETTER(AppManager, create)
-        PYAPI_STATIC_REF_GETTER(AppManager, onAppCanvasChange)
-        //PYAPI_METHOD(AppManager, requestWorkspace)
-        //PYAPI_METHOD(AppManager, freeWorkspace)
-        ;
-
     PYAPI_REF_BASE_CLASS(Workspace)
         PYAPI_METHOD(Workspace, setTiles)
         PYAPI_PROPERTY(Workspace, onActivated)
@@ -40,35 +30,9 @@ BOOST_PYTHON_MODULE(mvi)
         ;
 
     // App drawer
-    PYAPI_REF_BASE_CLASS(AppLauncher)
-        PYAPI_STATIC_REF_GETTER(AppLauncher, create)
-        PYAPI_STATIC_REF_GETTER(AppLauncher, instance)
-        PYAPI_METHOD(AppLauncher, show)
-        PYAPI_METHOD(AppLauncher, hide)
-        PYAPI_METHOD(AppLauncher, isVisible)
-        PYAPI_METHOD(AppLauncher, addApp)
-        PYAPI_METHOD(AppLauncher, setDrawerScale)
-        PYAPI_METHOD(AppLauncher, getDrawerScale)
-        PYAPI_METHOD(AppLauncher, getIconSize)
-        PYAPI_METHOD(AppLauncher, setIconSize)
-        PYAPI_METHOD(AppLauncher, onAppConnected)
-        PYAPI_METHOD(AppLauncher, onAppDisconnected)
-        PYAPI_REF_GETTER(AppLauncher, getContainer)
-        PYAPI_METHOD(AppLauncher, removeAppInstance)
-        ;
-
-    // AppInfo
-    PYAPI_REF_BASE_CLASS_WITH_CTOR(AppInfo)
-        PYAPI_PROPERTY(AppInfo, command)
-        PYAPI_PROPERTY(AppInfo, file)
-        PYAPI_PROPERTY(AppInfo, id)
-        PYAPI_PROPERTY(AppInfo, label)
-        PYAPI_PROPERTY(AppInfo, iconFile)
-        ;
-
-    // App drawer
     PYAPI_REF_BASE_CLASS(AppController)
         PYAPI_STATIC_REF_GETTER(AppController, create)
+        PYAPI_STATIC_METHOD(AppController, configPhysicalButtons)
         PYAPI_METHOD(AppController, setButton)
         .def("setShortcut", &AppController::setShortcut, AppController_setShortcut())
         ;

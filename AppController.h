@@ -24,6 +24,10 @@ class AppController: public EngineModule
 {
 public:
     static AppController* create();
+    //! Sets the button flags for the mode switch, mode and resize physical buttons.
+    //! This method is called by the remote application manager to setup
+    //! application buttons based on a global shared configuration.
+    static void configPhysicalButtons(uint modeSwitch, uint move, uint resize);
 
 public:
     AppController(PythonInterpreter* interp);
@@ -60,6 +64,10 @@ private:
     Shortcut* getOrCreateSortcut(Event::Flags button);
 
 private:
+    static Event::Flags mysModeSwitchButton;
+    static Event::Flags mysMoveButton;
+    static Event::Flags mysResizeButton;
+
     Ref<UiModule> myUi;
     
     int myBorderSize;
@@ -77,10 +85,6 @@ private:
     bool myVisible;
     float myDrawerScale;
     int myIconSize;
-
-    Event::Flags myModeSwitchButton;
-    Event::Flags myMoveButton;
-    Event::Flags myResizeButton;
 
     // When set to true, pointer events controlling the window are happening on
     // the window itself. This flag is needed to apply pointer delta correction

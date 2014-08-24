@@ -8,12 +8,6 @@ add_library(${MODULE_NAME} MODULE
 	mvi.cpp
 	AppController.cpp
 	AppController.h
-	AppLauncher.cpp
-	AppLauncher.h
-	AppInfo.cpp
-	AppInfo.h
-	AppManager.cpp
-	AppManager.h
 	Workspace.cpp
 	Workspace.h
 	WorkspaceLayout.cpp

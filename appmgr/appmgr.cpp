@@ -186,6 +186,11 @@ void AppManager::onClientConnected(const String& clientId)
     ofmsg("Application connected: %1%", %clientId);
     // New client connected: setup a new AppInstance.
     MissionControlConnection* conn = myServer->findConnection(clientId);
+
+    // Setup the connected app controller: configure buttons
+    String cmd = ostr("AppController.configPhysicalButtons(%1%, %2%, %3%)",
+        %myModeSwitchButton %myMoveButton %myResizeButton);
+    conn->sendMessage(MissionControlMessageIds::ScriptCommand, (void*)cmd.c_str(), cmd.size());
     
     AppInstance* ai = new AppInstance();
     ai->id = clientId;
