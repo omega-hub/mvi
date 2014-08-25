@@ -90,6 +90,10 @@ private:
     // the window itself. This flag is needed to apply pointer delta correction
     // after window is moved.
     bool myUsingLocalPointer;
+    // When absolute mode is set, moving and resizing will work differently.
+    // Resizing, instead of extending/shrinking the existing canvas, will let the
+    // user brush a rectangle to re-define both the canvas size and position.
+    bool myAbsoluteMode;
     bool myModifyingCanvas;
     bool myMovingCanvas;
     bool mySizingCanvas;

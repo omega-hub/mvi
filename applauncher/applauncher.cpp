@@ -50,6 +50,7 @@ private:
     List< Ref<AppInfo> > myApps;
 
     Ref<Button> myLaunchingItem;
+    float myLaunchingItemAnim;
 
     Dictionary<int, String> myLaunchCommands;
 };
@@ -124,22 +125,24 @@ void AppLauncher::addApp(const String& appfile)
         StringUtils::splitFilename(execpath, execname, execdir);
         execdir = execdir + "orun";
 
+        String appname;
+        String appdir;
+        StringUtils::splitFilename(appfile, appname, appdir);
+
         myApps.push_back(ai);
         Menu* mnu = getOrCreateGroup(ai->group);
         
         String mcarg = "";
         if(sMcAddr != "") mcarg = "--mc " + sMcAddr;
 
-        String cmd = ostr("if(isMaster()): olaunch('%1% %2% %3% %4% -I %5%')", 
+        String cmd = ostr("olaunch('%1% %2% %3% %4% -N %5%-$appid$ -I $appid$ $canvasdef$')", 
             %execdir 
             %appfile 
             %ai->args
             %mcarg
-            %myAppId
+            %appname
             );
             
-        myAppId++;
-
         MenuItem* mi = mnu->addButton(ai->label, "");
         mi->getWidget()->setUIEventHandler(this);
         myLaunchCommands[mi->getWidget()->getId()] = cmd;
@@ -161,12 +164,19 @@ void AppLauncher::addApp(const String& appfile)
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::initialize()
 {
-    myAppId = 0;
+    myAppId = 1;
 
     // Register myself as a mission control listener
-    MissionControlClient* mcc = SystemManager::instance()->getMissionControlClient();
-    oassert(mcc);
-    mcc->setListener(this);
+    if(SystemManager::instance()->isMaster())
+    {
+        MissionControlClient* mcc = SystemManager::instance()->getMissionControlClient();
+        oassert(mcc);
+        mcc->setListener(this);
+        mcc->postCommand(ostr(
+            "@server:"
+            "AppManager.instance().setLauncherApp('%1%')",
+            %mcc->getName()));
+    }
 
     myMenuManager = MenuManager::createAndInitialize();
     Menu* m = myMenuManager->createMenu("Root");
@@ -202,10 +212,33 @@ void AppLauncher::handleEvent(const Event& evt)
         // Save the current button, so we can animate it while we wait for the 
         // app to start.
         myLaunchingItem = Widget::getSource<Button>(evt);
+        myLaunchingItemAnim = 5.0f;
         PythonInterpreter* i = SystemManager::instance()->getScriptInterpreter();
 
-        // Run the launch command for this button.
-        i->queueCommand(myLaunchCommands[myLaunchingItem->getId()]);
+        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+        DisplayConfig& dc = ds->getDisplayConfig();
+        
+        if(SystemManager::instance()->isMaster())
+        {
+            String cmd = myLaunchCommands[myLaunchingItem->getId()];
+            // Run the launch command for this button.
+            // Add the canvas definition to the command line
+            Rect c = dc.getCanvasRect();
+
+            String canvasDef = ostr("-w %1%,%2%,%3%,%4%", %c.x() %c.y() %c.width() %c.height());
+            cmd = StringUtils::replaceAll(cmd, "$canvasdef$", canvasDef);
+
+            cmd = StringUtils::replaceAll(cmd, "$appid$", ostr("%1%", %myAppId));
+            myAppId++;
+
+            ofmsg("Launching %1%", %cmd);
+            
+            i->queueCommand(cmd, true);
+            
+        }
+        
+        // "hide" the app launcher.
+        //dc.setCanvasRect(Rect(1,1,10,10));
     }
 }
 
@@ -214,20 +247,15 @@ void AppLauncher::update(const UpdateContext& ctx)
 {
     if(myLaunchingItem != NULL)
     {
-        float ft = ctx.time;
-        myLaunchingItem->getImage()->setScale(1.0f + Math::abs(Math::sin(ft) * 0.3f));
+        myLaunchingItemAnim -= ctx.dt;
+        myLaunchingItem->getImage()->setScale(1.0f + Math::abs(Math::cos(5.0f - myLaunchingItemAnim) * 0.5));
+        if(myLaunchingItemAnim <= 0) myLaunchingItem = NULL;
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::onClientConnected(const String& str)
 {
-    if(myLaunchingItem != NULL)
-    {
-        // Just reset the launching item to stop its wait animation
-        myLaunchingItem->getImage()->setScale(1.0f);
-        myLaunchingItem = NULL;
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

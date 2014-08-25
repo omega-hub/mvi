@@ -65,7 +65,6 @@ public:
     void setDisplaySize(const String& clientid, int width, int height);
     void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
     void setLauncherApp(const String& appid);
-    void setSystemApp(const String& appid);
 
 private:
     // Get a 2D pointer out of a pointer or wand event
@@ -97,7 +96,6 @@ private:
     // or desktop apps. They can be launched when in control mode pointing to
     // an area where no other applications are active.
     Ref<AppInstance> myLauncherApp;
-    Ref<AppInstance> mySystemApp;
 
     typedef List< Ref<AppInstance> > AppInstanceList;
     AppInstanceList myZSortedAppInstances;
@@ -114,6 +112,7 @@ BOOST_PYTHON_MODULE(appmgr)
         PYAPI_STATIC_REF_GETTER(AppManager, instance)
         PYAPI_METHOD(AppManager, setDisplaySize)
         PYAPI_METHOD(AppManager, onAppCanvasChange)
+        PYAPI_METHOD(AppManager, setLauncherApp)
         ;
 }
 
@@ -223,6 +222,9 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     AppInstance* ai = myAppInstances[appid];
     oassert(ai != NULL);
     
+    ofmsg("CANVAS UPDATE: %1% - (%2% %3% %4% %5%)",
+        %appid %x %y %w %h);
+    
     ai->targetCanvas = Rect(x, y, w, h);
     ai->currentCanvas = Rect(x, y, w, h);
 
@@ -232,17 +234,10 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
 ///////////////////////////////////////////////////////////////////////////////
 void AppManager::setLauncherApp(const String& appid)
 {
+    ofmsg("Setting launcher application to: %1%", %appid);
     AppInstance* ai = myAppInstances[appid];
     oassert(ai != NULL);
     myLauncherApp = ai;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppManager::setSystemApp(const String& appid)
-{
-    AppInstance* ai = myAppInstances[appid];
-    oassert(ai != NULL);
-    mySystemApp = ai;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -328,25 +323,12 @@ void AppManager::handleEvent(const Event& evt)
                 {
                     ii->target = ai;
                 }
-                else
+                else if(myLauncherApp != NULL)
                 {
                     // We are in control locked down mode but we are not
-                    // pointing at any app. We treat these as special keys that
-                    // get forwarded to two special registered applications.
-                    // These apps typically work as app launchers / task managers.
-                    // Convert the event to a pointer event with the set position.
-                    Event& mutableEvent = const_cast<Event&>(evt);
-                    mutableEvent.setServiceType(Service::Pointer);
-                    mutableEvent.setPosition(pos[0], pos[1], 0);
-                    myServer->sendEventTo(evt, ai->connection);
-                    if(evt.isButtonDown(myMoveButton) && myLauncherApp != NULL)
-                    {
-                        myServer->sendEventTo(evt, myLauncherApp->connection);
-                    }
-                    else if(evt.isButtonDown(myResizeButton) && mySystemApp != NULL)
-                    {
-                        myServer->sendEventTo(evt, mySystemApp->connection);
-                    }
+                    // pointing at any app. Forward events to the registered 
+                    // launcher application.
+                    ii->target = myLauncherApp;
                 }
             }
             else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
@@ -360,6 +342,7 @@ void AppManager::handleEvent(const Event& evt)
             {
                 ai = getAppAt(pos);
             }
+            if(ai == NULL && myLauncherApp != NULL) ai = myLauncherApp;
             
             // Send pointer event to identfied target app
             if(ai != NULL)

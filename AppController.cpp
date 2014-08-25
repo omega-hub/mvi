@@ -32,7 +32,8 @@ myActiveUserId(-1),
 myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
 myUsingLocalPointer(false),
 myShowOverlay(false),
-myBorderSize(2)
+myBorderSize(2),
+myAbsoluteMode(false)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -53,6 +54,8 @@ void AppController::initialize()
         if(sResizeButton != "") mysResizeButton = Event::parseButtonName(sResizeButton);
         
         myShowOverlay = Config::getBoolValue("showOverlay", s, false);
+
+        myAbsoluteMode = Config::getBoolValue("absoluteMode", s, false);
         
         myBorderSize = Config::getIntValue("borderSize", s, 2);
         myBorderSize *= Platform::scale * 2;
@@ -203,10 +206,10 @@ void AppController::handleEvent(const Event& evt)
         getEngine()->setDrawPointers(false);
         
         // Done modifying canvas: send canvas update
-        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-        DisplayConfig& dc = ds->getDisplayConfig();
-        Rect canvas = dc.getCanvasRect();
-        setAppCanvas(canvas);
+        //DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+        //DisplayConfig& dc = ds->getDisplayConfig();
+        //Rect canvas = dc.getCanvasRect();
+        //setAppCanvas(canvas);
     }
 
     // Head tracking management: if we get a mocap event whose id is the same
@@ -228,9 +231,8 @@ void AppController::handleEvent(const Event& evt)
         }
     }
 
-    // See if this event happens inside the limits of the AppLauncher container, and convert it to a pointer event.
-    if(evt.getServiceType() == Service::Pointer || 
-        evt.getServiceType() == Service::Wand)
+    // See if this event happens inside the limits of the AppLauncher container
+    if(evt.getServiceType() == Service::Pointer)
     {
         const Vector3f& pos3 = evt.getPosition();
         Vector2i pos(pos3[0], pos3[1]);
@@ -270,6 +272,19 @@ void AppController::handleEvent(const Event& evt)
                     // Don't draw pointers while we move / resize the canvas.
                     // Since they will look to be drifting 
                     getEngine()->setDrawPointers(false);
+                    
+                    // If we are in absolute mode, reset the canvas size and position
+                    if(myAbsoluteMode)
+                    {
+                        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+                        DisplayConfig& dc = ds->getDisplayConfig();
+                        Rect canvas = dc.getCanvasRect();
+                        canvas.min += pos;
+                        // give it some initial size...
+                        int sz = 32 * Platform::scale;
+                        canvas.max = canvas.min + Vector2i(sz,sz);
+                        dc.setCanvasRect(canvas);
+                    }
                 }
 
             }
@@ -429,6 +444,9 @@ void AppController::setAppCanvas(const Rect& canvasRect)
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
     if(cli != NULL && cli->isConnected() && cli->getName() != "server")
     {
+        ofmsg(">>> %1% sending canvas %2% %3% %4% %5%", %cli->getName() %canvasRect.x() %canvasRect.y()
+            %canvasRect.width() %canvasRect.height());
+            
         cli->postCommand(ostr(
             "@server:"
             "appmgr.onAppCanvasChange('%1%', %2%, %3%, %4%, %5%)",
