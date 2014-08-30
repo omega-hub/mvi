@@ -337,6 +337,10 @@ void AppManager::handleEvent(const Event& evt)
                 myServer->broadcastEvent(evt, myServerConnection);
             }
             
+            // If we are not in locked mode (moving or resizing an app), find
+            // out which app we are pointing at and send event to that one. If
+            // we are not pointing at any app, send events to the registered app 
+            // launcher.
             AppInstance* ai = ii->target;
             if(!ii->lockedMode || ai == NULL)
             {
@@ -362,7 +366,11 @@ void AppManager::handleEvent(const Event& evt)
         {
             // We have a wand or pointer event and we are not in control mode:
             // send the event to the application registered to this event user
-            if(ii->target != NULL) myServer->sendEventTo(evt, ii->target->connection);
+            if(ii->target != NULL)
+            {
+                //ofmsg("send %1% to %2%", %evt.getPosition() %ii->target->id);
+                myServer->sendEventTo(evt, ii->target->connection);
+            }
         }
     }
     else
