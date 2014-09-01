@@ -52,6 +52,8 @@ private:
     Ref<Button> myLaunchingItem;
     float myLaunchingItemAnim;
 
+    Container* myGroup;
+
     Dictionary<int, String> myLaunchCommands;
 };
 
@@ -144,19 +146,27 @@ void AppLauncher::addApp(const String& appfile)
             );
             
         MenuItem* mi = mnu->addButton(ai->label, "");
-        mi->getWidget()->setUIEventHandler(this);
-        myLaunchCommands[mi->getWidget()->getId()] = cmd;
 
+        Button* b = Button::create(myGroup);
+        b->setText(ai->label);
+        //mi->getWidget()->setUIEventHandler(this);
+        b->setUIEventHandler(this);
+        myLaunchCommands[b->getId()] = cmd;
+
+        myGroup->setDebugModeEnabled(true);
+        myGroup->setSizeAnchorEnabled(true);
+        myGroup->setSizeAnchor(Vector2f(0, 0));
+        myGroup->setAutosize(false);
 
         // FOrce a layout to get the label size.
-        mi->getButton()->getLabel()->autosize();
-        int h = mi->getButton()->getLabel()->getHeight();
+        b->getLabel()->autosize();
+        int h = b->getLabel()->getHeight();
 
         PixelData* icon = getOrCreateIcon(ai->iconFile);
         if(icon != NULL)
         {
-            mi->setImage(getOrCreateIcon(ai->iconFile));
-            mi->getImage()->setSize(Vector2f(h * 2, h * 2));
+            b->setIcon(getOrCreateIcon(ai->iconFile));
+            b->getImage()->setSize(Vector2f(h * 2, h * 2));
         }
     }
 }
@@ -180,6 +190,11 @@ void AppLauncher::initialize()
 
     myMenuManager = MenuManager::createAndInitialize();
     Menu* m = myMenuManager->createMenu("Root");
+
+    myGroup = Container::create(Container::LayoutGridHorizontal, UiModule::instance()->getUi());
+    myGroup->setGridColumns(4);
+    myGroup->setGridRows(4);
+
 
     m->addLabel("Application Launcher");
     myGroups["root"] = m;
@@ -236,9 +251,6 @@ void AppLauncher::handleEvent(const Event& evt)
             i->queueCommand(cmd, true);
             
         }
-        
-        // "hide" the app launcher.
-        //dc.setCanvasRect(Rect(1,1,10,10));
     }
 }
 
@@ -261,7 +273,6 @@ void AppLauncher::onClientConnected(const String& str)
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::onClientDisconnected(const String& str)
 {
-    // Nothing much to do here.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
