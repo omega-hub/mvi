@@ -24,7 +24,7 @@ public:
 class AppLauncher: public EngineModule, public IMissionControlListener
 {
 public:
-    AppLauncher() : EngineModule("AppLauncher") { }
+    AppLauncher() : EngineModule("AppLauncher") { omegaToolkitPythonApiInit(); }
     virtual void initialize();
 
 private:
