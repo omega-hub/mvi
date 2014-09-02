@@ -191,9 +191,6 @@ void AppController::handleEvent(const Event& evt)
         myActiveUserId = evt.getUserId();
         myModifyingCanvas = true;
         if(myShowOverlay) show();
-        
-        // Make sure pointer drawing is enabled.
-        getEngine()->setDrawPointers(true);
     }
     else if(evt.isButtonUp(mysModeSwitchButton))
     {
@@ -201,9 +198,6 @@ void AppController::handleEvent(const Event& evt)
         myMovingCanvas = false;
         mySizingCanvas = false;
         if(myShowOverlay) hide();
-        
-        // Bit of a hack: if we are not in control mode, disable pointer drawing
-        getEngine()->setDrawPointers(false);
         
         // Done modifying canvas: send canvas update
         //DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();

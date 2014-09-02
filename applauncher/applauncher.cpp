@@ -40,8 +40,6 @@ private:
 
 private:
     unsigned int myAppId;
-    Ref<MenuManager> myMenuManager;
-    Ref<Menu> myRootMenu;
 
     Dictionary<String, Ref<PixelData> > myIcons;
 
@@ -80,16 +78,16 @@ PixelData* AppLauncher::getOrCreateIcon(const String& iconfile)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-Menu* AppLauncher::getOrCreateGroup(const String& groupname)
-{
-    if(myGroups.find(groupname) != myGroups.end()) return myGroups[groupname];
+// Menu* AppLauncher::getOrCreateGroup(const String& groupname)
+// {
+    // if(myGroups.find(groupname) != myGroups.end()) return myGroups[groupname];
 
-    // Create new menu.
-    Menu* root = myMenuManager->getMainMenu();
-    Menu* group = root->addSubMenu(groupname);
-    myGroups[groupname] = group;
-    return group;
-}
+    // // Create new menu.
+    // Menu* root = myMenuManager->getMainMenu();
+    // Menu* group = root->addSubMenu(groupname);
+    // myGroups[groupname] = group;
+    // return group;
+// }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::addApp(const String& appfile)
@@ -132,8 +130,7 @@ void AppLauncher::addApp(const String& appfile)
         StringUtils::splitFilename(appfile, appname, appdir);
 
         myApps.push_back(ai);
-        Menu* mnu = getOrCreateGroup(ai->group);
-        
+
         String mcarg = "";
         if(sMcAddr != "") mcarg = "--mc " + sMcAddr;
 
@@ -145,15 +142,12 @@ void AppLauncher::addApp(const String& appfile)
             %appname
             );
             
-        MenuItem* mi = mnu->addButton(ai->label, "");
-
         Button* b = Button::create(myGroup);
         b->setText(ai->label);
         //mi->getWidget()->setUIEventHandler(this);
         b->setUIEventHandler(this);
         myLaunchCommands[b->getId()] = cmd;
 
-        myGroup->setDebugModeEnabled(true);
         myGroup->setSizeAnchorEnabled(true);
         myGroup->setSizeAnchor(Vector2f(0, 0));
         myGroup->setAutosize(false);
@@ -188,18 +182,9 @@ void AppLauncher::initialize()
             %mcc->getName()));
     }
 
-    myMenuManager = MenuManager::createAndInitialize();
-    Menu* m = myMenuManager->createMenu("Root");
-
     myGroup = Container::create(Container::LayoutGridHorizontal, UiModule::instance()->getUi());
     myGroup->setGridColumns(4);
     myGroup->setGridRows(4);
-
-
-    m->addLabel("Application Launcher");
-    myGroups["root"] = m;
-
-    myMenuManager->setMainMenu(m);
 
     // Run the python script to obtain the list of files in the script 
     // directory.

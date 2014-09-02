@@ -345,6 +345,7 @@ void AppManager::handleEvent(const Event& evt)
             if(!ii->lockedMode || ai == NULL)
             {
                 ai = getAppAt(pos);
+                ii->target = ai;
             }
             if(ai == NULL && myLauncherApp != NULL) ai = myLauncherApp;
             
