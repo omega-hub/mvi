@@ -21,7 +21,7 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-class AppLauncher: public EngineModule, public IMissionControlListener
+class AppLauncher: public EngineModule
 {
 public:
     AppLauncher() : EngineModule("AppLauncher") { omegaToolkitPythonApiInit(); }
@@ -31,9 +31,6 @@ private:
     void addApp(const String& appfile);
     PixelData* getOrCreateIcon(const String& iconfile);
     Menu*   getOrCreateGroup(const String& groupname);
-
-    void onClientConnected(const String& str);
-    void onClientDisconnected(const String& str);
 
     void handleEvent(const Event& evt);
     void update(const UpdateContext& ctx);
@@ -64,7 +61,7 @@ const char* listFilesFunction =
     "   for root,dirs,files in os.walk(scriptDir):\n"
     "      for f in files:\n"
     "         if(f.endswith('.oapp')):\n"
-    "             result = result + root + '/' + f + ' '\n"
+    "             result = result + root.replace('\\\\','/') + '/' + f  + ' '\n"
     "   return result\n";
     
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,18 +73,6 @@ PixelData* AppLauncher::getOrCreateIcon(const String& iconfile)
     myIcons[iconfile] = icon;
     return icon;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Menu* AppLauncher::getOrCreateGroup(const String& groupname)
-// {
-    // if(myGroups.find(groupname) != myGroups.end()) return myGroups[groupname];
-
-    // // Create new menu.
-    // Menu* root = myMenuManager->getMainMenu();
-    // Menu* group = root->addSubMenu(groupname);
-    // myGroups[groupname] = group;
-    // return group;
-// }
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppLauncher::addApp(const String& appfile)
@@ -160,7 +145,7 @@ void AppLauncher::addApp(const String& appfile)
         if(icon != NULL)
         {
             b->setIcon(getOrCreateIcon(ai->iconFile));
-            b->getImage()->setSize(Vector2f(h * 2, h * 2));
+            b->getImage()->setSize(Vector2f(h * 4, h * 4));
         }
     }
 }
@@ -175,16 +160,16 @@ void AppLauncher::initialize()
     {
         MissionControlClient* mcc = SystemManager::instance()->getMissionControlClient();
         oassert(mcc);
-        mcc->setListener(this);
         mcc->postCommand(ostr(
             "@server:"
             "AppManager.instance().setLauncherApp('%1%')",
             %mcc->getName()));
     }
 
-    myGroup = Container::create(Container::LayoutGridHorizontal, UiModule::instance()->getUi());
+    myGroup = Container::create(Container::LayoutGridHorizontal, UiModule::createAndInitialize()->getUi());
     myGroup->setGridColumns(4);
     myGroup->setGridRows(4);
+    myGroup->setPadding(24 * Platform::scale);
 
     // Run the python script to obtain the list of files in the script 
     // directory.
@@ -248,16 +233,6 @@ void AppLauncher::update(const UpdateContext& ctx)
         myLaunchingItem->getImage()->setScale(1.0f + Math::abs(Math::cos(5.0f - myLaunchingItemAnim) * 0.5));
         if(myLaunchingItemAnim <= 0) myLaunchingItem = NULL;
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppLauncher::onClientConnected(const String& str)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppLauncher::onClientDisconnected(const String& str)
-{
 }
 
 ///////////////////////////////////////////////////////////////////////////////
