@@ -19,12 +19,13 @@ config:
         label = "Web Browser";
         icon="./browser.png";
         group="Utilities";
-        args = "-w 0,0,840,480";
+        args = "-w 0,0,5000,3000";
     };
     orun:
     {
         initScript="browser.py";
         appStartFunction="";
+
     };
-    //services: {};
+    services: {};
 };

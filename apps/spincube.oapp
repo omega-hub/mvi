@@ -16,5 +16,5 @@ config:
         group="Examples";
         args = "-s cyclops/examples/python/spincube.py";
     };
-    //services: {};
+    services: {};
 };
