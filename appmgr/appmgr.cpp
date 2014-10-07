@@ -301,11 +301,27 @@ void AppManager::handleEvent(const Event& evt)
         if(evt.isButtonDown(myModeSwitchButton))
         {
             ii->controlMode = true;
+            // Disable the focus border around the currently focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(False)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+            }
         }
         else if(evt.isButtonUp(myModeSwitchButton))
         {
             ii->controlMode = false;
             ii->lockedMode = false;
+            // Enable the focus border for the focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(True)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+            }
             myServer->broadcastEvent(evt, myServerConnection);
         }
         

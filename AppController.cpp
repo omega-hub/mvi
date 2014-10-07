@@ -6,6 +6,7 @@
 Event::Flags AppController::mysModeSwitchButton = Event::Alt;
 Event::Flags AppController::mysMoveButton = Event::Button1;
 Event::Flags AppController::mysResizeButton = Event::Button2;
+bool AppController::mysFocused = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resize)
@@ -13,6 +14,12 @@ void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resiz
     mysModeSwitchButton = (Event::Flags)modeSwitch;
     mysMoveButton = (Event::Flags)move;
     mysResizeButton = (Event::Flags)resize;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::setFocus(bool value)
+{
+    mysFocused = value;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,7 +40,8 @@ myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
 myUsingLocalPointer(false),
 myShowOverlay(false),
 myBorderSize(2),
-myAbsoluteMode(false)
+myAbsoluteMode(false),
+myCurrentFocus(false)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -176,6 +184,21 @@ void AppController::update(const UpdateContext& context)
         // Resize/position the overlay.
         myBackground->setSize(canvas.size().cast<omicron::real>());
         myContainer->setCenter(myBackground->getCenter());
+    }
+    
+    if(myCurrentFocus != mysFocused)
+    {
+        myCurrentFocus = mysFocused;
+        if(mysFocused)
+        {
+            Container* root = myBackground->getContainer();
+            root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+        }
+        else
+        {
+            Container* root = myBackground->getContainer();
+            root->setStyleValue("border", "0 black");
+        }
     }
     myPointerDelta = Vector2i::Zero();
 }
@@ -341,8 +364,8 @@ void AppController::show()
     myBackground->setEnabled(false);
     myBackground->setVisible(true);
 
-    Container* root = myBackground->getContainer();
-    root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+    //Container* root = myBackground->getContainer();
+    //root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -351,9 +374,6 @@ void AppController::hide()
     myVisible = false;
     myBackground->setEnabled(false);
     myBackground->setVisible(false);
-
-    Container* root = myBackground->getContainer();
-    root->setStyleValue("border", ostr("%1% #D119FF", %myBorderSize));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
