@@ -55,6 +55,7 @@ public:
     void setButton(uint index, PixelData* icon, const String& command);
 
 private:
+    void parseConfig(Config* cfg);
     void updateButton(uint index);
     void setAppCanvas(const Rect& canvasRect);
 

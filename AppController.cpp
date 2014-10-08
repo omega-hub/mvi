@@ -47,10 +47,8 @@ myCurrentFocus(false)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppController::initialize()
+void AppController::parseConfig(Config* cfg)
 {
-    // Read config options
-    Config* cfg = SystemManager::instance()->getAppConfig();
     if(cfg->exists("config/appController"))
     {
         Setting& s = cfg->lookup("config/appController");
@@ -61,13 +59,21 @@ void AppController::initialize()
         if(sMoveButton != "") mysMoveButton = Event::parseButtonName(sMoveButton);
         if(sResizeButton != "") mysResizeButton = Event::parseButtonName(sResizeButton);
         
-        myShowOverlay = Config::getBoolValue("showOverlay", s, false);
+        myShowOverlay = Config::getBoolValue("showOverlay", s, myShowOverlay);
 
-        myAbsoluteMode = Config::getBoolValue("absoluteMode", s, false);
+        myAbsoluteMode = Config::getBoolValue("absoluteMode", s, myAbsoluteMode);
         
-        myBorderSize = Config::getIntValue("borderSize", s, 2);
-        myBorderSize *= Platform::scale * 2;
+        myBorderSize = Config::getIntValue("borderSize", s, myBorderSize);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppController::initialize()
+{
+    // Read config options
+    parseConfig(SystemManager::instance()->getSystemConfig());
+    parseConfig(SystemManager::instance()->getAppConfig());
+    myBorderSize *= Platform::scale * 2;
 
     myUi = UiModule::createAndInitialize();
 
@@ -103,6 +109,7 @@ void AppController::initialize()
     //myButtonContainer->setStyleValue("border", "1 green");
     myButtonContainer->setFillColor(Color::Black);
     myButtonContainer->setFillEnabled(true);
+    myButtonContainer->setVisible(false);
 
     Image* dpad = Image::create(myContainer);
     dpad->setData(ImageUtils::loadImage("mvi/icons/dpad.png"));
@@ -192,7 +199,15 @@ void AppController::update(const UpdateContext& context)
         if(mysFocused)
         {
             Container* root = myBackground->getContainer();
-            root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+            // Choose a color based on active user ID:
+            if(myActiveUserId == 0) root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+            else if(myActiveUserId == 1) root->setStyleValue("border", ostr("%1% #9638FF", %myBorderSize));
+            else if(myActiveUserId == 2) root->setStyleValue("border", ostr("%1% #96FF08", %myBorderSize));
+            else root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+            
+            // We are focused, make sure the application canvas is on front of
+            // all other app canvases on the display.
+            dc.bringToFront();
         }
         else
         {
