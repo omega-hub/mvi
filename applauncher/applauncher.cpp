@@ -185,8 +185,6 @@ void AppLauncher::initialize()
     {
         addApp(file);
     }
-    
-    SystemManager::instance()->getDisplaySystem()->setBackgroundColor(Color("black"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
