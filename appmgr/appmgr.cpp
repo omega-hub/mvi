@@ -130,7 +130,8 @@ AppManager::AppManager():
     mySys(SystemManager::instance()),
     myModeSwitchButton(Event::Alt),
     myMoveButton(Event::Button1),
-    myResizeButton(Event::Button2)
+    myResizeButton(Event::Button2),
+    myCurrentTopZ(1)
 {
     mysInstance = this;
 }
@@ -227,8 +228,16 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     
     ai->targetCanvas = Rect(x, y, w, h);
     ai->currentCanvas = Rect(x, y, w, h);
+    ai->z = myCurrentTopZ++;
 
-    // TODO: Update other app canvases here.
+    // Place app on top of z sorted app instance list.
+    myZSortedAppInstances.remove(ai);
+    myZSortedAppInstances.push_front(ai);
+
+    // Resize non-top canvases (not working and disabled for now, code also)
+    // removed, check old mvi/AppManager.cpp code if you want to look it up)
+    //computeAppCanvases();
+    //updateAppCanvases();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -301,11 +310,31 @@ void AppManager::handleEvent(const Event& evt)
         if(evt.isButtonDown(myModeSwitchButton))
         {
             ii->controlMode = true;
+            // Disable the focus border around the currently focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(False)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+            }
         }
         else if(evt.isButtonUp(myModeSwitchButton))
         {
             ii->controlMode = false;
             ii->lockedMode = false;
+            // Enable the focus border for the focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(True)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+                    
+                // Also place the application in front of the Z sorted instance list
+                myZSortedAppInstances.remove(ii->target);
+                myZSortedAppInstances.push_front(ii->target);
+            }
             myServer->broadcastEvent(evt, myServerConnection);
         }
         

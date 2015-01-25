@@ -28,6 +28,11 @@ public:
     //! This method is called by the remote application manager to setup
     //! application buttons based on a global shared configuration.
     static void configPhysicalButtons(uint modeSwitch, uint move, uint resize);
+    //! Sets the focused or unfocused mode for this application. Applications in
+    //! focused mode are receiving input from an input controller. The application
+    //! manager (appmgr) takes care of calling this method. Focused mode only sets
+    //! a visual property (i.e. a colored border) of the application.
+    static void setFocus(bool value);
 
 public:
     AppController(PythonInterpreter* interp);
@@ -50,6 +55,7 @@ public:
     void setButton(uint index, PixelData* icon, const String& command);
 
 private:
+    void parseConfig(Config* cfg);
     void updateButton(uint index);
     void setAppCanvas(const Rect& canvasRect);
 
@@ -67,9 +73,11 @@ private:
     static Event::Flags mysModeSwitchButton;
     static Event::Flags mysMoveButton;
     static Event::Flags mysResizeButton;
+    static bool mysFocused;
 
     Ref<UiModule> myUi;
     
+    bool myCurrentFocus;
     int myBorderSize;
     Ref<Container> myContainer;
     Ref<Container> myBackground;
