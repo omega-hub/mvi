@@ -363,7 +363,13 @@ void AppManager::handleEvent(const Event& evt)
             else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
             {
                 ii->lockedMode = false;
-                myServer->broadcastEvent(evt, myServerConnection);
+                
+                // Convert to a pointer event before broadcasting: AppController
+                // expect pointer events for windows size/move.
+                // Convert the event to a pointer event with the set position.
+                Event& mutableEvent = const_cast<Event&>(evt);
+                mutableEvent.setServiceType(Service::Pointer);
+                myServer->broadcastEvent(mutableEvent, myServerConnection);
             }
             
             // If we are not in locked mode (moving or resizing an app), find
