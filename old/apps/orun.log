@@ -1,0 +1,143 @@
+omegalib data search paths:
+::: D:\Workspace\omegalib\source\modules\mvi\apps
+::: D:/Workspace/omegalib/source
+omegalib application config lookup:
+::: trying orun/D:\Workspace\omegalib\source\modules\mvi\apps\browser.oapp
+::: not found, trying D:\Workspace\omegalib\source\modules\mvi\apps\browser.oapp
+::: found config: D:\Workspace\omegalib\source\modules\mvi\apps\browser.oapp
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> OMEGALIB BOOT
+Opened config file: D:\Workspace\omegalib\source\modules\mvi\apps\browser.oapp
+Opened config file: default.cfg
+Opened config file: system/desktop-1080p.cfg
+SystemManager::setupDisplaySystem: type = Equalizer
+Bezel size: 0 0
+SharedDataServices::registerObject: queuing interp for registration
+PythonInterpreter::initialize: found local python library in D:/Workspace/omegalib/source/modules/python
+PythonInterpreter::addPythonPath: ./
+PythonInterpreter::addPythonPath: D:/Workspace/omegalib/build/bin/release/
+PythonInterpreter::addPythonPath: D:/Workspace/omegalib/source/modules
+PythonInterpreter: starting interactive shell thread.
+PythonInterpreter::runFile: running mvi/config/split2.py
+ModuleServices::addModule: Module_1
+Python Interpreter initialized.
+ModuleServices::addModule: OmegaViewer
+Service added: MouseService
+Service added: KeyboardService
+Service added: ViewRayService
+Initializing mission control server on port 22500
+ModuleServices::addModule: MissionControlClient
+Mission control connection open (id=0)
+ServiceManager::initialize
+Event buffer allocated. Max events: 512
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< OMEGALIB BOOT
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> DISPLAY INITIALIZATION
+[EQ] ConfigImpl::ConfigImpl
+[EQ] ConfigImpl::init
+ModuleServices::addModule: EventSharingModule
+ModuleServices::addModule: console
+Camera controller: keyboardmouse
+ModuleServices::addModule: CameraController
+Engine: Running with sound disabled.
+Death switch timeout: 240 seconds
+[EQ] NodeImpl::NodeImpl
+[EQ] NodeImpl::configInit 40378a3efa09720:c8200ae719ff034
+@Renderer::Initialize: id = 0
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< DISPLAY INITIALIZATION
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION LOOP
+Mission control connection open (id=0)
+Connection 0 name changed to server
+Creating death switch thread
+ModuleServices::addModule: UiModule
+UiModule initializing...
+UiModule initialization OK
+Renderer(0): adding render pass UiRenderPass
+omegaToolkitPythonApiInit()
+cyclopsPythonApiInit()
+>>>>> Cyclops version 1.2 ready
+PythonInterpreter::runFile: running browser.py
+
+>>>>> PYTHON ERROR!!! Traceback (most recent call last):
+  File "browser.py", line 92, in <module>
+    create(400,400)
+  File "browser.py", line 42, in create
+    urlbox.updateSize()
+AttributeError: 'TextBox' object has no attribute 'updateSize'
+
+>>>>> PYTHON ERROR!!! Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+NameError: name '_onAppStart' is not defined
+
+
+
+---------------------------------------------------------------------
+Welcome to orun!
+	omegalib version 6.0-alpha7-canvas
+	To get a list of quick commands type :?
+	Type :? . to list all global symbols
+	Type :? C to list all members of class or variable `C`
+		example :? SceneNode
+	Type :? ./C [prefix] to list global symbols or object members starting with `prefix`
+		example :? . si
+		example :? SceneNode set
+
+
+
+
+Renderer(0): adding render pass console
+Creating Font fonts/arial.ttf 28
+Engine::refreshPointer: creating pointer 0
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< APPLICATION LOOP
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> OMEGALIB SHUTDOWN
+Mission control connection closed (id=0)
+!!! TcpConnection::close (id=1): connection was not open
+ModuleServices::disposeNonCoreModules
+UiModule::dispose
+Engine: removing render pass UiRenderPass
+Engine::dispose
+ModuleServices::disposeAll
+EventSharingModule::dispose
+~UiModule
+~EngineModule UiModule
+~EngineModule Module_1
+~EngineModule OmegaViewer
+~EngineModule EventSharingModule
+~EngineModule console
+~EngineModule CameraController
+Engine::dispose: cleaning up 0 cameras
+~PythonInterpreter
+~EngineModule MissionControlClient
+~Engine
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< OMEGALIB SHUTDOWN
+
+
+===================== ReferenceType object leaks follow:
+class omegaToolkit::ui::ImageRenderable: 5
+class omegaToolkit::UiRenderPass: 1
+class omicron::FilesystemDataSource: 1
+class omicron::Config: 1
+class omega::Renderer: 1
+class omega::Font: 2
+class omegaToolkit::ui::LabelRenderable: 5
+class omega::Stat: 2
+class omega::PixelData: 4
+class omicron::FilesystemDataSource: 5
+class omegaToolkit::ui::Label: 4
+class omega::DrawInterface: 1
+class omega::DisplayTileConfig: 1
+class omega::StatsManager: 1
+class omegaToolkit::UiScriptCommand: 1
+class omegaToolkit::ui::DefaultButton: 4
+class omegaToolkit::ui::Container: 5
+class omegaToolkit::ui::Image: 5
+class omegaToolkit::ui::TextBox: 1
+class omega::ConsoleRenderPass: 1
+class omegaToolkit::ui::ContainerRenderable: 5
+class omegaToolkit::ui::DefaultButtonRenderable: 4
+class omega::PointerRenderable: 1
+struct omega::RenderableCommand: 1

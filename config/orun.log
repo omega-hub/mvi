@@ -1,0 +1,85 @@
+omegalib data search paths:
+::: D:\Workspace\omegalib\source\modules\mvi\config
+::: D:/Workspace/omegalib/source
+omegalib application config lookup:
+::: trying CAVEstatus.oapp-1/D:/Workspace/omegalib/source/modules/evl/apps/CAVEstatus.oapp
+::: not found, trying D:/Workspace/omegalib/source/modules/evl/apps/CAVEstatus.oapp
+::: found config: D:/Workspace/omegalib/source/modules/evl/apps/CAVEstatus.oapp
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> OMEGALIB BOOT
+Opened config file: D:/Workspace/omegalib/source/modules/evl/apps/CAVEstatus.oapp
+Opened config file: default.cfg
+Default system configuration file: system/desktop-1080p.cfg
+Opened config file: system/desktop-1080p.cfg
+SystemManager::setupDisplaySystem: type = Equalizer
+Bezel size: 0 0
+Grid size 1 1 pool 100 numTimes 1
+SharedDataServices::registerObject: queuing interp for registration
+PythonInterpreter::initialize: found local python library in D:/Workspace/omegalib/source/modules/python
+PythonInterpreter::addPythonPath: ./
+PythonInterpreter::addPythonPath: D:/Workspace/omegalib/build/bin/debug/
+PythonInterpreter::addPythonPath: D:/Workspace/omegalib/source/modules
+PythonInterpreter: starting interactive shell thread.
+PythonInterpreter::runFile: running mvi/config/split2.py
+ModuleServices::addModule: Module_1
+Python Interpreter initialized.
+omegaToolkitPythonApiInit()
+ModuleServices::addModule: OmegaViewer
+Service added: MouseService
+Service added: KeyboardService
+Service added: ViewRayService
+Mission control client: connecting to localhost:22500
+ModuleServices::addModule: MissionControlClient
+ServiceManager::initialize
+Event buffer allocated. Max events: 512
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< OMEGALIB BOOT
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> DISPLAY INITIALIZATION
+[EQ] ConfigImpl::ConfigImpl
+[EQ] ConfigImpl::init
+ModuleServices::addModule: EventSharingModule
+ModuleServices::addModule: console
+Camera controller: keyboardmouse
+ModuleServices::addModule: CameraController
+Engine: Running with sound disabled.
+Death switch timeout: 240 seconds
+[EQ] NodeImpl::NodeImpl
+[EQ] NodeImpl::configInit 45a2ef9fd71fc8a1:a99cae8f7cb0f016
+@Renderer::Initialize: id = 0
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< DISPLAY INITIALIZATION
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION LOOP
+Creating death switch thread
+ModuleServices::addModule: UiModule
+UiModule initializing...
+UiModule initialization OK
+Renderer(0): adding render pass UiRenderPass
+PythonInterpreter::runFile: running CAVEstatus.py
+ModuleServices::addModule: Module_2
+loading http://www.evl.uic.edu/aej/cavemonitor.html
+width: 178
+scale: 1
+
+
+
+---------------------------------------------------------------------
+Welcome to orun!
+	omegalib version 6.0-beta1
+	To get a list of quick commands type :?
+	Type :? . to list all global symbols
+	Type :? C to list all members of class or variable `C`
+		example :? SceneNode
+	Type :? ./C [prefix] to list global symbols or object members starting with `prefix`
+		example :? . si
+		example :? SceneNode set
+
+
+
+
+Renderer(0): adding render pass console
+~EngineModule OmegaViewer
+~EngineModule MissionControlClient
+~EngineModule console
+~EngineModule CameraController
+~EngineModule EventSharingModule

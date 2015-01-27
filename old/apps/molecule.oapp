@@ -1,0 +1,17 @@
+config:
+{
+	systemConfig = "DEFAULT";
+    initScript = "mvi/config/split2.py";
+    appController:
+    {
+        showOverlay = true;
+    };
+    app:
+    {
+        label = "Molecule";
+        icon="./molecule.png";
+        group="Examples";
+        args = "-s /data/evl/omegalib/apps/molecule/molecule.py";
+    };
+    services: {};
+};
