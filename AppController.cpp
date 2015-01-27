@@ -238,10 +238,10 @@ void AppController::handleEvent(const Event& evt)
         if(myShowOverlay) hide();
         
         // Done modifying canvas: send canvas update
-        //DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-        //DisplayConfig& dc = ds->getDisplayConfig();
-        //Rect canvas = dc.getCanvasRect();
-        //setAppCanvas(canvas);
+        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+        DisplayConfig& dc = ds->getDisplayConfig();
+        Rect canvas = dc.getCanvasRect();
+        setAppCanvas(canvas);
     }
 
     // Head tracking management: if we get a mocap event whose id is the same
@@ -331,6 +331,8 @@ void AppController::handleEvent(const Event& evt)
                 DisplayConfig& dc = ds->getDisplayConfig();
                 Rect canvas = dc.getCanvasRect();
                 setAppCanvas(canvas);
+                
+                omsg("moving done");
                 
                 getEngine()->setDrawPointers(true);
             }
