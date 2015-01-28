@@ -7,13 +7,11 @@ using namespace omega;
 struct AppInstance : public ReferenceType
 {
     AppInstance():
-        targetCanvas(0,0,0,0),
         currentCanvas(0,0,0,0),
         z(0),
         dirtyCanvas(false) {}
         
     String id;
-    Rect targetCanvas;
     Rect currentCanvas;
     int z;
     bool dirtyCanvas;
@@ -226,7 +224,6 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     ofmsg("CANVAS UPDATE: %1% - (%2% %3% %4% %5%)",
         %appid %x %y %w %h);
     
-    ai->targetCanvas = Rect(x, y, w, h);
     ai->currentCanvas = Rect(x, y, w, h);
     ai->z = myCurrentTopZ++;
 
