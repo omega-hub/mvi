@@ -9,9 +9,14 @@ struct AppInstance : public ReferenceType
     AppInstance():
         currentCanvas(0,0,0,0),
         z(0),
+        slot(0),
         dirtyCanvas(false) {}
         
     String id;
+    // slot is the allocation number of this app instance. it is used by the omegalib
+    // runtime to determine poer allocation for the application (using the -I 
+    // command line argument)
+    int slot;
     Rect currentCanvas;
     int z;
     bool dirtyCanvas;
@@ -64,16 +69,26 @@ public:
     void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
     void setLauncherApp(const String& appid);
 
+    // Run a script using orun
+    void run(const String& script);
+
 private:
     // Get a 2D pointer out of a pointer or wand event
     bool get2DPointer(const Event& evt, Vector2i& out);
     InputInfo* getOrCreateInputInfo(const Event& evt);
     AppInstance* getAppAt(Vector2i pos);
     
+    AppInstance* allocAppInstance(String appName);
+    void releaseAppInstance(AppInstance* ai);
+
 private:
     static AppManager* mysInstance;
 
     SystemManager* mySys;
+
+    // Name of the app configuration file to use with applications launched
+    // with :run
+    String myAppConfig;
 
     Ref<MissionControlServer> myServer;
     Ref<MissionControlConnection> myServerConnection;
@@ -98,6 +113,11 @@ private:
     typedef List< Ref<AppInstance> > AppInstanceList;
     AppInstanceList myZSortedAppInstances;
     unsigned int myCurrentTopZ;
+
+    // Maximum number of instances that can run simultaneously. Each app needs a 
+    // separate port allocated when running on a cluster, so this number is limited.
+    static const int MaxAppInstances = 256;
+    AppInstance* myAppInstanceIds[MaxAppInstances];
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -132,6 +152,7 @@ AppManager::AppManager():
     myCurrentTopZ(1)
 {
     mysInstance = this;
+    memset(myAppInstanceIds, 0, MaxAppInstances * sizeof(AppInstance*));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,6 +169,8 @@ void AppManager::initialize()
         if(sModeSwitchButton != "") myModeSwitchButton = Event::parseButtonName(sModeSwitchButton);
         if(sMoveButton != "") myMoveButton = Event::parseButtonName(sMoveButton);
         if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
+
+        myAppConfig = Config::getStringValue("appConfig", s, "mvi/mvi.cfg");
     }
 
     myServer = mySys->getMissionControlServer();
@@ -182,20 +205,23 @@ void AppManager::initialize()
 void AppManager::onClientConnected(const String& clientId)
 {
     ofmsg("Application connected: %1%", %clientId);
-    // New client connected: setup a new AppInstance.
     MissionControlConnection* conn = myServer->findConnection(clientId);
 
     // Setup the connected app controller: configure buttons
     String cmd = ostr("AppController.configPhysicalButtons(%1%, %2%, %3%)",
         %myModeSwitchButton %myMoveButton %myResizeButton);
     conn->sendMessage(MissionControlMessageIds::ScriptCommand, (void*)cmd.c_str(), cmd.size());
-    
-    AppInstance* ai = new AppInstance();
-    ai->id = clientId;
-    ai->connection = conn;
-    
-    myAppInstances[clientId] = ai;
-    myZSortedAppInstances.push_front(ai);
+
+    if(myAppInstances.find(clientId) == myAppInstances.end())
+    {
+        oferror("AppManager::onClientConnected: could not find app instance %1%", %clientId);
+    }
+    else
+    {
+        AppInstance* ai = myAppInstances[clientId];
+        ai->connection = conn;
+        myZSortedAppInstances.push_front(ai);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -204,6 +230,8 @@ void AppManager::onClientDisconnected(const String& clientId)
     ofmsg("Application disconnected: %1%", %clientId);
     
     AppInstance* ai = myAppInstances[clientId];
+    releaseAppInstance(ai);
+
     myZSortedAppInstances.remove(ai);
     myAppInstances[clientId] = NULL;
 }
@@ -230,11 +258,6 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     // Place app on top of z sorted app instance list.
     myZSortedAppInstances.remove(ai);
     myZSortedAppInstances.push_front(ai);
-
-    // Resize non-top canvases (not working and disabled for now, code also)
-    // removed, check old mvi/AppManager.cpp code if you want to look it up)
-    //computeAppCanvases();
-    //updateAppCanvases();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -417,9 +440,78 @@ bool AppManager::handleCommand(const String& cmd)
 {
     // :q exits app.
     if(cmd == "q") mySys->postExitRequest();
+    // :run runs a script through orun
+    else if(StringUtils::startsWith(cmd, "run"))
+    {
+        String scriptName = cmd.substr(3);
+        StringUtils::trim(scriptName);
+        run(scriptName);
+    }
 
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::run(const String& script)
+{
+    // get an app name based on the script
+    String appname;
+    String path;
+    String ext;
+    StringUtils::splitFullFilename(script, appname, ext, path);
+
+    // Allocate an app instance.
+    AppInstance* ai = allocAppInstance(appname);
+    if(ai == NULL)
+    {
+        ofwarn("AppManager::run: failed to allocate new app instance for %1%", %script);
+    }
+    else
+    {
+        String cmd = ostr("orun %1% -s %2% -N %3% -I %4% --mc @localhost",
+            %myAppConfig
+            %script
+            %ai->id
+            %ai->slot);
+
+        myAppInstances[ai->id] = ai;
+        ofmsg("Running %1%: %2%", %ai->id %script);
+
+        olaunch(cmd);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+AppInstance* AppManager::allocAppInstance(String appName)
+{
+    for(int i = 0; i < MaxAppInstances; i++)
+    {
+        if(myAppInstanceIds[i] == NULL)
+        {
+            AppInstance* ai = new AppInstance();
+            ai->slot = i;
+            ai->id = ostr("%1%-%2%", %appName %ai->slot);
+            myAppInstanceIds[i] = ai;
+            return ai;
+        }
+    }
+
+    return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::releaseAppInstance(AppInstance* ai)
+{
+    for(int i = 0; i < MaxAppInstances; i++)
+    {
+        if(myAppInstanceIds[i] == ai)
+        {
+            myAppInstanceIds[i] = NULL;
+            return;
+        }
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
