@@ -21,8 +21,25 @@ struct AppInstance : public ReferenceType
     int z;
     bool dirtyCanvas;
     Ref<MissionControlConnection> connection;
+
+    // Active tiles for this app
+    List< DisplayTileConfig* > activeTiles;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// Stores per-tile information used to allocate tile rendering
+struct TileAllocation: public ReferenceType
+{
+    DisplayTileConfig* tile;
+    struct LocalAppRect: public ReferenceType
+    {
+        AppInstance* app;
+        Rect localRect;
+    };
+    List< Ref<LocalAppRect> > apps;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Information about input data coming from a specific user
 struct InputInfo: ReferenceType
 {
@@ -58,6 +75,7 @@ public:
     AppManager();
     void initialize();
     void handleEvent(const Event& evt);
+    void update(const UpdateContext& context);
 
     // From IMissionControlListener
     void onClientConnected(const String& clientId);
@@ -73,6 +91,8 @@ public:
     void run(const String& script);
 
 private:
+    void loadDisplayConfig(String configFileName);
+
     // Get a 2D pointer out of a pointer or wand event
     bool get2DPointer(const Event& evt, Vector2i& out);
     InputInfo* getOrCreateInputInfo(const Event& evt);
@@ -80,6 +100,9 @@ private:
     
     AppInstance* allocAppInstance(String appName);
     void releaseAppInstance(AppInstance* ai);
+
+    void updateTileAllocation();
+    void sendActiveTileUpdates();
 
 private:
     static AppManager* mysInstance;
@@ -99,6 +122,8 @@ private:
     Event::Flags myMoveButton;
     Event::Flags myResizeButton;
     InputInfoTable myInputInfoTable;
+    float myTileUpdateInterval;
+    float myLastTileUpdate;
 
     // Pixel size of the connected display
     Vector2i myDisplaySize;
@@ -118,6 +143,10 @@ private:
     // separate port allocated when running on a cluster, so this number is limited.
     static const int MaxAppInstances = 256;
     AppInstance* myAppInstanceIds[MaxAppInstances];
+
+    // Display config
+    DisplayConfig myDisplayConfig;
+    List< Ref<TileAllocation> > myTileAllocation;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -149,7 +178,9 @@ AppManager::AppManager():
     myModeSwitchButton(Event::Alt),
     myMoveButton(Event::Button1),
     myResizeButton(Event::Button2),
-    myCurrentTopZ(1)
+    myCurrentTopZ(1),
+    myTileUpdateInterval(1),
+    myLastTileUpdate(0)
 {
     mysInstance = this;
     memset(myAppInstanceIds, 0, MaxAppInstances * sizeof(AppInstance*));
@@ -158,6 +189,8 @@ AppManager::AppManager():
 ///////////////////////////////////////////////////////////////////////////////
 void AppManager::initialize()
 {
+    String displayConfigFile = "DEFAULT";
+
     // Read in configuration
     Config* cfg = SystemManager::instance()->getAppConfig();
     if(cfg->exists("config/appmgr"))
@@ -171,6 +204,10 @@ void AppManager::initialize()
         if(sResizeButton != "") myResizeButton = Event::parseButtonName(sResizeButton);
 
         myAppConfig = Config::getStringValue("appConfig", s, "mvi/mvi.cfg");
+        displayConfigFile = Config::getStringValue("displayConfig", s, "DEFAULT");
+
+        // By default recompute tile allocation every second.
+        myTileUpdateInterval = Config::getFloatValue("tileUpdateInterval", s, 1.0);
     }
 
     myServer = mySys->getMissionControlServer();
@@ -188,17 +225,67 @@ void AppManager::initialize()
 
     // Use the python interpreter to load and initialize the porthole web server.
     PythonInterpreter* interpreter = mySys->getScriptInterpreter();
-    interpreter->eval("import porthole");
-    interpreter->eval("porthole.initialize('mvi/appmgr/pointer.xml')");
+    //interpreter->eval("import porthole");
+    //interpreter->eval("porthole.initialize('mvi/appmgr/pointer.xml')");
 
     // Initialize python API and create a variable 'appmgr' storing the
     // AppManager instance
+    interpreter->lockInterpreter();
     initappmgr();
     interpreter->eval("from appmgr import *");
     interpreter->eval("appmgr = AppManager.instance()");
+    interpreter->unlockInterpreter();
 
+    // Load the display configuration
+    loadDisplayConfig(displayConfigFile);
 
     omsg("Application Manager initialization complete!");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::loadDisplayConfig(String displayConfigFile)
+{
+    if(displayConfigFile == "DEFAULT")
+    {
+        Config* defaultCfg = new Config("default.cfg");
+        if(defaultCfg->load())
+        {
+            displayConfigFile = (const char*)defaultCfg->lookup("config/systemConfig");
+            ofmsg("Default system configuration file: %1%", %displayConfigFile);
+        }
+        else
+        {
+            oerror("SystemManager::setup: FATAL - coult not load default.cfg");
+        }
+    }
+
+    Ref<Config> displayConfig = new Config(displayConfigFile);
+    bool loaded = displayConfig->load();
+
+    if(!loaded)
+    {
+        oferror("loading %1% failed", %displayConfigFile);
+    }
+    else
+    {
+        if(displayConfig->exists("config/display"))
+        {
+            Setting& s = displayConfig->lookup("config/display");
+            DisplayConfig::LoadConfig(s, myDisplayConfig);
+        }
+        else
+        {
+            oferror("Config file %1% is missing a display configuration section", %displayConfigFile);
+        }
+
+        // Initialize the objects needed for tile allocation.
+        foreach(DisplayConfig::Tile tile, myDisplayConfig.tiles)
+        {
+            TileAllocation* ta = new TileAllocation();
+            ta->tile = tile.second;
+            myTileAllocation.push_back(ta);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -436,6 +523,16 @@ void AppManager::handleEvent(const Event& evt)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void AppManager::update(const UpdateContext& context)
+{
+    if(context.time - myLastTileUpdate > myTileUpdateInterval)
+    {
+        myLastTileUpdate = context.time;
+        updateTileAllocation();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 bool AppManager::handleCommand(const String& cmd)
 {
     // :q exits app.
@@ -512,6 +609,96 @@ void AppManager::releaseAppInstance(AppInstance* ai)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::updateTileAllocation()
+{
+    // Clean app rects in current tile allocation
+    foreach(TileAllocation* ta, myTileAllocation)
+    {
+        ta->apps.clear();
+    }
+
+    // Clean enabled tiles for each app
+    foreach(AppInstanceDictionary::Item ai, myAppInstances)
+    {
+        ai->activeTiles.clear();
+    }
+
+    // Loop over applications front-to-back
+    foreach(AppInstance* ai, myZSortedAppInstances)
+    {
+        foreach(TileAllocation* ta, myTileAllocation)
+        {
+            // Compute the interection between the tile and application canvas.
+            Rect tileRect(ta->tile->offset, ta->tile->offset + ta->tile->pixelSize);
+            pair<bool, Rect> localIntersection = ai->currentCanvas.getIntersection(tileRect);
+
+            if(localIntersection.first)
+            {
+                List< Ref<TileAllocation::LocalAppRect> > localAppsToRemove;
+                // Loop over the other applications that share this canvas.
+                // NOTE: since we are looping front-to-back, these apps will be
+                // in front of the current one.
+                // Remove this app rect from their local rect. If an app rect is
+                // completely covered by other apps, remove it from the list
+                // of applications active for this tile.
+                foreach(TileAllocation::LocalAppRect* lar, ta->apps)
+                {
+                    pair<bool, Rect> newLocalRect;
+                    lar->localRect.subtract(localIntersection.second);
+
+                    if(newLocalRect.first)
+                    {
+                        if(newLocalRect.second.size() == Vector2i::Zero())
+                        {
+                            localAppsToRemove.push_back(lar);
+                        }
+                        lar->localRect = newLocalRect.second;
+                    }
+                }
+
+                // Remove apps with empty local rects from the apps enabled
+                // for this tile.
+                foreach(TileAllocation::LocalAppRect* lar, localAppsToRemove)
+                {
+                    ta->apps.remove(lar);
+                }
+
+                // Add the current app to the list of apps enabled for this tile.
+                TileAllocation::LocalAppRect* lar = new TileAllocation::LocalAppRect();
+                lar->app = ai;
+                lar->localRect = localIntersection.second;
+                ta->apps.push_back(lar);
+            }
+        }
+    }
+
+    // Now we have an updated list of display tiles, each with a list of apps
+    // that should render on those tiles. Save the list of enabled tiles with
+    // each app instance.
+    foreach(TileAllocation* ta, myTileAllocation)
+    {
+        foreach(TileAllocation::LocalAppRect* lar, ta->apps)
+        {
+            lar->app->activeTiles.push_back(ta->tile);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::sendActiveTileUpdates()
+{
+    foreach(AppInstanceDictionary::Item ai, myAppInstances)
+    {
+        String tileNames = "";
+        foreach(DisplayTileConfig* dtc, ai->activeTiles)
+        {
+            tileNames.append(dtc->name);
+            tileNames.append(" ");
+        }
+        ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
