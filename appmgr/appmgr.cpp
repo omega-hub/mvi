@@ -320,7 +320,7 @@ void AppManager::onClientDisconnected(const String& clientId)
     releaseAppInstance(ai);
 
     myZSortedAppInstances.remove(ai);
-    myAppInstances[clientId] = NULL;
+    myAppInstances.erase(clientId);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
