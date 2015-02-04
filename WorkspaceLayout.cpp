@@ -30,6 +30,16 @@ Workspace* WorkspaceLayout::createWorkspace(const String& name, const String& ic
         w *= dc.displayResolution[0];
         y *= dc.displayResolution[1];
         h *= dc.displayResolution[1];
+        
+        // Remove this many pixels from the canvas margins to avoid crossing tile
+        // boundaries due to precision errors.
+        int safeMargin = 5;
+        
+        x += safeMargin;
+        y += safeMargin;
+        
+        w -= safeMargin * 2;
+        h -= safeMargin * 2;
     }
     Workspace* wk = new Workspace(name, this, icon);
     wk->setWorkspaceRect(Rect((int)x, (int)y, (int)w, (int)h));

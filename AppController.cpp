@@ -143,12 +143,6 @@ void AppController::initialize()
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
     if(cli != NULL && cli->isConnected() && cli->getName() != "server")
     {
-        cli->postCommand(ostr(
-            "@server:"
-            "appmgr.setDisplaySize('%1%', %2%, %3%)",
-            %cli->getName()
-            %dc.displayResolution[0] %dc.displayResolution[1]));
-        
         // Also do an initial setAppCanvas to let the server know our canvas information
         DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
         DisplayConfig& dc = ds->getDisplayConfig();
@@ -332,7 +326,7 @@ void AppController::handleEvent(const Event& evt)
                 Rect canvas = dc.getCanvasRect();
                 setAppCanvas(canvas);
                 
-                omsg("moving done");
+                //omsg("moving done");
                 
                 getEngine()->setDrawPointers(true);
             }
@@ -367,6 +361,7 @@ void AppController::handleEvent(const Event& evt)
                     DisplayConfig& dc = ds->getDisplayConfig();
                     dc.bringToFront();
                     const Rect& r = s->target->getWorkspaceRect();
+                    ofmsg("WORKSPACE %1%     %2% %3%", %s->target->getName() %r.min %r.max);
                     setAppCanvas(r);
                 }
             }

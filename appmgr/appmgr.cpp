@@ -83,7 +83,6 @@ public:
     bool handleCommand(const String& cmd);
     
     // Called by connected clients
-    void setDisplaySize(const String& clientid, int width, int height);
     void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
     void setLauncherApp(const String& appid);
 
@@ -125,9 +124,6 @@ private:
     float myTileUpdateInterval;
     float myLastTileUpdate;
 
-    // Pixel size of the connected display
-    Vector2i myDisplaySize;
-
     // App instance data
     AppInstanceDictionary myAppInstances;
     // Refs to special 'system' applications, typically launchers, system apps
@@ -157,7 +153,6 @@ BOOST_PYTHON_MODULE(appmgr)
     // clients through Mission Control.
     PYAPI_REF_BASE_CLASS(AppManager)
         PYAPI_STATIC_REF_GETTER(AppManager, instance)
-        PYAPI_METHOD(AppManager, setDisplaySize)
         PYAPI_METHOD(AppManager, onAppCanvasChange)
         PYAPI_METHOD(AppManager, setLauncherApp)
         ;
@@ -324,13 +319,6 @@ void AppManager::onClientDisconnected(const String& clientId)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppManager::setDisplaySize(const String& clientid, int width, int height)
-{
-    myDisplaySize = Vector2i(width, height);
-    ofmsg("Display size set to %1%", %myDisplaySize);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int h)
 {
     AppInstance* ai = myAppInstances[appid];
@@ -384,8 +372,8 @@ bool AppManager::get2DPointer(const Event& evt, Vector2i& out)
     if(evt.getServiceType() == Service::Wand && 
         !evt.isExtraDataNull(2) && !evt.isExtraDataNull(3))
     {
-        out[0] = evt.getExtraDataFloat(2) * myDisplaySize[0];
-        out[1] = evt.getExtraDataFloat(3) * myDisplaySize[1];
+        out[0] = evt.getExtraDataFloat(2) * myDisplayConfig.displayResolution[0];
+        out[1] = evt.getExtraDataFloat(3) * myDisplayConfig.displayResolution[1];
     }
     return true;
 }
@@ -529,6 +517,7 @@ void AppManager::update(const UpdateContext& context)
     {
         myLastTileUpdate = context.time;
         updateTileAllocation();
+        sendActiveTileUpdates();
     }
 }
 
@@ -565,7 +554,7 @@ void AppManager::run(const String& script)
     }
     else
     {
-        String cmd = ostr("orun %1% -s %2% -N %3% -I %4% --mc @localhost",
+        String cmd = ostr("./orun %1% -s %2% -N %3% -I %4% --mc @localhost",
             %myAppConfig
             %script
             %ai->id

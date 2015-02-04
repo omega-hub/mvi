@@ -27,18 +27,7 @@ public:
     void setTiles(const String& tiles);
 
     //! Sets the position and size of this workspace in pixels
-    void setWorkspaceRect(const Rect& r) { myRect = r;  }
-
-
-    //! Requests activation of this workspace. This call returns immediately.
-    //! If activation succeeds (i.e. the workspace area is not allocated to
-    //! other applications), the workspace will be activated at a later time
-    //! Immediately activates the workspace.
-    //void requestActivation();
-
-    //void activate();
-    //! Immediately deactivated the workspace.
-    //void deactivate();
+    void setWorkspaceRect(const Rect& r);
 
     bool containsTile(DisplayTileConfig*);
 

@@ -16,6 +16,13 @@ myRect(Vector2i(100000,100000),Vector2i::Zero())
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void Workspace::setWorkspaceRect(const Rect& r) 
+{ 
+    ofmsg("Workspace: %1% -- %2% %3%", %myName %r.min %r.max);
+    myRect = r;  
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void Workspace::setTiles(const String& tiles)
 {
     DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
@@ -38,48 +45,9 @@ void Workspace::setTiles(const String& tiles)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//void Workspace::requestActivation()
-//{
-//    WorkspaceLibrary* wm = myLayout->getWorkspaceLibrary();
-//    wm->requestWorkspace(myLayout->getName(), myName);
-//}
-//
-/////////////////////////////////////////////////////////////////////////////////
-//void Workspace::activate()
-//{
-//    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-//    DisplayConfig& dcfg = ds->getDisplayConfig();
-//
-//    dcfg.setCanvasRect(myRect);
-//
-//    // First disable all tiles
-//    //foreach(DisplayConfig::Tile t, dcfg.tiles) t->enabled = false;
-//
-//    // The enable tiles in this workspace.
-//    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = true;
-//}
-//
-/////////////////////////////////////////////////////////////////////////////////
-//void Workspace::deactivate()
-//{
-//    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-//    DisplayConfig& dcfg = ds->getDisplayConfig();
-//
-//    dcfg.setCanvasRect(Rect(0, 0, 0, 0));
-//
-//    // DIsable tiles in this workspace.
-//    //foreach(DisplayTileConfig* dtc, myTiles) dtc->enabled = false;
-//}
-
-///////////////////////////////////////////////////////////////////////////////
 bool Workspace::containsTile(DisplayTileConfig* tile)
 {
     return myRect.intersects(Rect(tile->offset, tile->offset + tile->pixelSize));
-    //foreach(DisplayTileConfig* t, myTiles)
-    //{
-    //    if(t == tile) return true;
-    //}
-    //return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -87,12 +55,7 @@ bool Workspace::overlaps(Workspace* other)
 {
     // Simple case first, are workspaces the same?
     if(other == this) return true;
-    //foreach(DisplayTileConfig* t, myTiles)
-    //{
-    //    if(other->containsTile(t)) return true;
-    //}
     return myRect.intersects(other->getWorkspaceRect());
-    //return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

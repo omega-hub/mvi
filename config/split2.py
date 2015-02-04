@@ -4,17 +4,12 @@ def initWorkspace():
     wl = WorkspaceLibrary.create()
 
     center = wl.createLayout('center')
-    print('center')
     print(center)
     center.createWorkspace('full', 'mvi/icons/center-full.png', 0, 0, 1, 1)
 
-    print('a')
-
     split = wl.createLayout('split')
     split.createWorkspace('left',  'mvi/icons/left-12.png', 0, 0, 0.5, 1)
-    print('b')
     split.createWorkspace('right', 'mvi/icons/right-12.png', 0.5, 0, 0.5, 1)
-    print('c')
     split.createWorkspace('close', 'mvi/icons/close.png', 0, 0, 0, 0)
 
     ac = AppController.create()

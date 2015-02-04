@@ -63,7 +63,7 @@ private:
     {
         Event::Flags button;
         Ref<PixelData> icon;
-        Workspace* target;
+        Ref<Workspace> target;
         String command;
     };
 
