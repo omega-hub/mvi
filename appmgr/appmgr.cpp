@@ -242,7 +242,7 @@ void AppManager::loadDisplayConfig(String displayConfigFile)
 {
     if(displayConfigFile == "DEFAULT")
     {
-        Config* defaultCfg = new Config("default.cfg");
+        Ref<Config> defaultCfg = new Config("default.cfg");
         if(defaultCfg->load())
         {
             displayConfigFile = (const char*)defaultCfg->lookup("config/systemConfig");
