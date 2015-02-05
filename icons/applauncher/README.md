@@ -1,1 +1,0 @@
-A simple application launcher for omegalib
