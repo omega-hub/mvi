@@ -1,5 +1,7 @@
 from mvi import *
 
+
+
 def initWorkspace():
     wl = WorkspaceLibrary.create()
 
@@ -20,5 +22,6 @@ def initWorkspace():
 
     ac.setButton(0, loadImage('mvi/icons/close.png'), 'oexit()')
 
-    
-queueCommand('initWorkspace()')
+
+if(mviInit()):    
+    queueCommand('initWorkspace()')

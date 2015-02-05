@@ -16,7 +16,7 @@ struct AppInstance : public ReferenceType
     // slot is the allocation number of this app instance. it is used by the omegalib
     // runtime to determine poer allocation for the application (using the -I 
     // command line argument)
-    int slot;
+    int32_t slot;
     Rect currentCanvas;
     int z;
     bool dirtyCanvas;
@@ -289,17 +289,26 @@ void AppManager::onClientConnected(const String& clientId)
     ofmsg("Application connected: %1%", %clientId);
     MissionControlConnection* conn = myServer->findConnection(clientId);
 
-    // Setup the connected app controller: configure buttons
-    String cmd = ostr("AppController.configPhysicalButtons(%1%, %2%, %3%)",
-        %myModeSwitchButton %myMoveButton %myResizeButton);
-    conn->sendMessage(MissionControlMessageIds::ScriptCommand, (void*)cmd.c_str(), cmd.size());
-
     if(myAppInstances.find(clientId) == myAppInstances.end())
     {
-        oferror("AppManager::onClientConnected: could not find app instance %1%", %clientId);
+        // If there is no app instance for this client, it means an external
+        // app (i.e. not launched through AppManager::run) is connecting.
+        // allocate an app instance now.
+        ofmsg("AppManager New External Application Connected: %1%", %clientId);
+        AppInstance* ai = allocAppInstance(clientId);
+        myAppInstances[ai->id] = ai;
+
+
+        // Send the application slot to the connected app.
+        conn->sendMessage("slot", (void*)&ai->slot, sizeof(int32_t));
     }
     else
     {
+        // Setup the connected app controller: configure buttons
+        String cmd = ostr("AppController.configPhysicalButtons(%1%, %2%, %3%)",
+            %myModeSwitchButton %myMoveButton %myResizeButton);
+        conn->sendMessage(MissionControlMessageIds::ScriptCommand, (void*)cmd.c_str(), cmd.size());
+
         AppInstance* ai = myAppInstances[clientId];
         ai->connection = conn;
         myZSortedAppInstances.push_front(ai);
@@ -311,11 +320,21 @@ void AppManager::onClientDisconnected(const String& clientId)
 {
     ofmsg("Application disconnected: %1%", %clientId);
     
-    AppInstance* ai = myAppInstances[clientId];
-    releaseAppInstance(ai);
+    // If app instance has no connection set, this means it is a temporary
+    // connection from an external app asking for an app slot (see 
+    // AppManager::onClientConnected and mviInit in mvi.cpp). DO NOT deallocate
+    // it, since we expect the app to reconnect once initialization is done.
+    if(myAppInstances.find(clientId) != myAppInstances.end())
+    {
+        AppInstance* ai = myAppInstances[clientId];
+        if(ai->connection != NULL)
+        {
+            releaseAppInstance(ai);
 
-    myZSortedAppInstances.remove(ai);
-    myAppInstances.erase(clientId);
+            myZSortedAppInstances.remove(ai);
+            myAppInstances.erase(clientId);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
