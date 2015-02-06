@@ -1,149 +1,4 @@
-#include <omega.h>
-
-using namespace omega;
-
-///////////////////////////////////////////////////////////////////////////////
-// Stored data about a single application instance.
-struct AppInstance : public ReferenceType
-{
-    AppInstance():
-        currentCanvas(0,0,0,0),
-        z(0),
-        slot(0),
-        dirtyCanvas(false) {}
-        
-    String id;
-    // slot is the allocation number of this app instance. it is used by the omegalib
-    // runtime to determine poer allocation for the application (using the -I 
-    // command line argument)
-    int32_t slot;
-    Rect currentCanvas;
-    int z;
-    bool dirtyCanvas;
-    Ref<MissionControlConnection> connection;
-
-    // Active tiles for this app
-    List< DisplayTileConfig* > activeTiles;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Stores per-tile information used to allocate tile rendering
-struct TileAllocation: public ReferenceType
-{
-    DisplayTileConfig* tile;
-    struct LocalAppRect: public ReferenceType
-    {
-        AppInstance* app;
-        Rect localRect;
-    };
-    List< Ref<LocalAppRect> > apps;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Information about input data coming from a specific user
-struct InputInfo: ReferenceType
-{
-    InputInfo():
-        controlMode(false), lockedMode(false) {}
-        
-    // When set to true input from this user is in control mode
-    // i.e. user is controlling layout instead of sending input to a specific app
-    bool controlMode;
-    // When set to true, we are in control mode and "locked-on" on a single
-    // application, moving or resizing its canvas. when this flag is set, events
-    // will be forwarded to this app regardless of where the pointer is, to avoid
-    // losing control of the app if we are moving the pointer too fast or out
-    // of bounds.
-    bool lockedMode;
-    
-    // Target application for this input source;
-    Ref<AppInstance> target;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Some useful typedefs.
-typedef Dictionary<String, Ref<AppInstance> > AppInstanceDictionary;
-typedef Dictionary<uint, Ref<MissionControlConnection> > EventRoutingTable;
-typedef Dictionary<uint, Ref<InputInfo> > InputInfoTable;
-
-///////////////////////////////////////////////////////////////////////////////
-class AppManager : public EngineModule, public IMissionControlListener
-{
-public:
-    static AppManager* instance();
-
-    AppManager();
-    void initialize();
-    void handleEvent(const Event& evt);
-    void update(const UpdateContext& context);
-
-    // From IMissionControlListener
-    void onClientConnected(const String& clientId);
-    void onClientDisconnected(const String& clientId);
-    bool handleCommand(const String& cmd);
-    
-    // Called by connected clients
-    void onAppCanvasChange(const String& appid, int x, int y, int w, int h);
-    void setLauncherApp(const String& appid);
-
-    // Run a script using orun
-    void run(const String& script);
-
-private:
-    void loadDisplayConfig(String configFileName);
-
-    // Get a 2D pointer out of a pointer or wand event
-    bool get2DPointer(const Event& evt, Vector2i& out);
-    InputInfo* getOrCreateInputInfo(const Event& evt);
-    AppInstance* getAppAt(Vector2i pos);
-    
-    AppInstance* allocAppInstance(String appName);
-    void releaseAppInstance(AppInstance* ai);
-
-    void updateTileAllocation();
-    void sendActiveTileUpdates();
-
-private:
-    static AppManager* mysInstance;
-
-    SystemManager* mySys;
-
-    // Name of the app configuration file to use with applications launched
-    // with :run
-    String myAppConfig;
-
-    Ref<MissionControlServer> myServer;
-    Ref<MissionControlConnection> myServerConnection;
-
-    EventRoutingTable myEventRoutingTable;
-
-    Event::Flags myModeSwitchButton;
-    Event::Flags myMoveButton;
-    Event::Flags myResizeButton;
-    InputInfoTable myInputInfoTable;
-    float myTileUpdateInterval;
-    float myLastTileUpdate;
-
-    // App instance data
-    AppInstanceDictionary myAppInstances;
-    // Refs to special 'system' applications, typically launchers, system apps
-    // or desktop apps. They can be launched when in control mode pointing to
-    // an area where no other applications are active.
-    Ref<AppInstance> myLauncherApp;
-
-    typedef List< Ref<AppInstance> > AppInstanceList;
-    AppInstanceList myZSortedAppInstances;
-    unsigned int myCurrentTopZ;
-
-    // Maximum number of instances that can run simultaneously. Each app needs a 
-    // separate port allocated when running on a cluster, so this number is limited.
-    static const int MaxAppInstances = 256;
-    AppInstance* myAppInstanceIds[MaxAppInstances];
-
-    // Display config
-    DisplayConfig myDisplayConfig;
-    List< Ref<TileAllocation> > myTileAllocation;
-};
+#include "appmgr.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 #include "omega/PythonInterpreterWrapper.h"
@@ -158,6 +13,14 @@ BOOST_PYTHON_MODULE(appmgr)
         ;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+int main(int argc, char** argv)
+{
+    // This app name will make app use /mvi/appmgr/appmgr.cfg as the default
+    // config file.
+    Application<AppManager> app("mvi/appmgr/appmgr");
+    return omain(app, argc, argv);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 AppManager* AppManager::mysInstance = NULL;
@@ -372,6 +235,7 @@ InputInfo* AppManager::getOrCreateInputInfo(const Event& evt)
     if(myInputInfoTable.find(evt.getUserId()) == myInputInfoTable.end())
     {
         ii = new InputInfo();
+        ofmsg("Creating input info entry for user %1%", %evt.getUserId());
         myInputInfoTable[evt.getUserId()] = ii;
     }
     else
@@ -414,6 +278,90 @@ AppInstance* AppManager::getAppAt(Vector2i pos)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
+{
+    if(evt.isButtonDown(myModeSwitchButton))
+    {
+        ii->controlMode = true;
+        // Disable the focus border around the currently focused application
+        if(ii->target != NULL)
+        {
+            String cmd = "AppController.setFocus(False)";
+            ii->target->connection->sendMessage(
+                MissionControlMessageIds::ScriptCommand, 
+                (void*)cmd.c_str(), cmd.size());
+        }
+    }
+    else if(evt.isButtonUp(myModeSwitchButton))
+    {
+        ii->controlMode = false;
+        ii->lockedMode = false;
+        // Enable the focus border for the focused application
+        if(ii->target != NULL)
+        {
+            String cmd = "AppController.setFocus(True)";
+            ii->target->connection->sendMessage(
+                MissionControlMessageIds::ScriptCommand, 
+                (void*)cmd.c_str(), cmd.size());
+                
+            // Also place the application in front of the Z sorted instance list
+            myZSortedAppInstances.remove(ii->target);
+            myZSortedAppInstances.push_front(ii->target);
+        }
+        myServer->broadcastEvent(evt, myServerConnection);
+    }
+    
+    return ii->controlMode;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::processLockedMode(const Event& evt, const Vector2i& pos, InputInfo* ii)
+{
+    if(evt.isButtonDown(myMoveButton) || evt.isButtonDown(myResizeButton))
+    {
+        // Go in locked-on mode: find which application we are pointing at.
+        ii->lockedMode = true;
+        AppInstance* ai = getAppAt(pos);
+        if(ai != NULL)
+        {
+            ii->target = ai;
+        }
+        else if(myLauncherApp != NULL)
+        {
+            // We are in control locked down mode but we are not
+            // pointing at any app. Forward events to the registered 
+            // launcher application.
+            ii->target = myLauncherApp;
+        }
+    }
+    else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
+    {
+        ii->lockedMode = false;
+        
+        // Convert to a pointer event before broadcasting: AppController
+        // expect pointer events for windows size/move.
+        // Convert the event to a pointer event with the set position.
+        Event& mutableEvent = const_cast<Event&>(evt);
+        mutableEvent.setServiceType(Service::Pointer);
+        myServer->broadcastEvent(mutableEvent, myServerConnection);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AppManager::sendPointerEvent(const Event& evt, Vector2i& pos, AppInstance* ai)
+{
+    Rect& cc = ai->currentCanvas;
+    pos[0] -= cc.min[0];
+    pos[1] -= cc.min[1];
+    
+    // Convert the event to a pointer event with the set position.
+    Event& mutableEvent = const_cast<Event&>(evt);
+    mutableEvent.setServiceType(Service::Pointer);
+    mutableEvent.setPosition(pos[0], pos[1], 0);
+    myServer->sendEventTo(evt, ai->connection);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void AppManager::handleEvent(const Event& evt)
 {
     if(evt.getServiceType() == Service::Pointer || 
@@ -421,70 +369,14 @@ void AppManager::handleEvent(const Event& evt)
     {
         InputInfo* ii = getOrCreateInputInfo(evt);
         
-        if(evt.isButtonDown(myModeSwitchButton))
+        // Are we in canvas control mode?
+        if(processControlMode(evt, ii))
         {
-            ii->controlMode = true;
-            // Disable the focus border around the currently focused application
-            if(ii->target != NULL)
-            {
-                String cmd = "AppController.setFocus(False)";
-                ii->target->connection->sendMessage(
-                    MissionControlMessageIds::ScriptCommand, 
-                    (void*)cmd.c_str(), cmd.size());
-            }
-        }
-        else if(evt.isButtonUp(myModeSwitchButton))
-        {
-            ii->controlMode = false;
-            ii->lockedMode = false;
-            // Enable the focus border for the focused application
-            if(ii->target != NULL)
-            {
-                String cmd = "AppController.setFocus(True)";
-                ii->target->connection->sendMessage(
-                    MissionControlMessageIds::ScriptCommand, 
-                    (void*)cmd.c_str(), cmd.size());
-                    
-                // Also place the application in front of the Z sorted instance list
-                myZSortedAppInstances.remove(ii->target);
-                myZSortedAppInstances.push_front(ii->target);
-            }
-            myServer->broadcastEvent(evt, myServerConnection);
-        }
-        
-        if(ii->controlMode)
-        {
+            // Get a 2D pointer from this event.
             Vector2i pos;
             get2DPointer(evt, pos);
             
-            if(evt.isButtonDown(myMoveButton) || evt.isButtonDown(myResizeButton))
-            {
-                // Go in locked-on mode: find which application we are pointing at.
-                ii->lockedMode = true;
-                AppInstance* ai = getAppAt(pos);
-                if(ai != NULL)
-                {
-                    ii->target = ai;
-                }
-                else if(myLauncherApp != NULL)
-                {
-                    // We are in control locked down mode but we are not
-                    // pointing at any app. Forward events to the registered 
-                    // launcher application.
-                    ii->target = myLauncherApp;
-                }
-            }
-            else if(evt.isButtonUp(myMoveButton) || evt.isButtonUp(myResizeButton))
-            {
-                ii->lockedMode = false;
-                
-                // Convert to a pointer event before broadcasting: AppController
-                // expect pointer events for windows size/move.
-                // Convert the event to a pointer event with the set position.
-                Event& mutableEvent = const_cast<Event&>(evt);
-                mutableEvent.setServiceType(Service::Pointer);
-                myServer->broadcastEvent(mutableEvent, myServerConnection);
-            }
+            processLockedMode(evt, pos, ii);
             
             // If we are not in locked mode (moving or resizing an app), find
             // out which app we are pointing at and send event to that one. If
@@ -496,21 +388,11 @@ void AppManager::handleEvent(const Event& evt)
                 ai = getAppAt(pos);
                 ii->target = ai;
             }
+            
             if(ai == NULL && myLauncherApp != NULL) ai = myLauncherApp;
             
             // Send pointer event to identfied target app
-            if(ai != NULL)
-            {
-                Rect& cc = ai->currentCanvas;
-                pos[0] -= cc.min[0];
-                pos[1] -= cc.min[1];
-                
-                // Convert the event to a pointer event with the set position.
-                Event& mutableEvent = const_cast<Event&>(evt);
-                mutableEvent.setServiceType(Service::Pointer);
-                mutableEvent.setPosition(pos[0], pos[1], 0);
-                myServer->sendEventTo(evt, ai->connection);
-            }
+            if(ai != NULL) sendPointerEvent(evt, pos, ai);
         }
         else
         {
@@ -518,7 +400,7 @@ void AppManager::handleEvent(const Event& evt)
             // send the event to the application registered to this event user
             if(ii->target != NULL)
             {
-                //ofmsg("send %1% to %2%", %evt.getPosition() %ii->target->id);
+                //ofmsg("send %1% to %2%", %evt.getUserId() %ii->target->id);
                 myServer->sendEventTo(evt, ii->target->connection);
             }
         }
@@ -704,15 +586,7 @@ void AppManager::sendActiveTileUpdates()
             tileNames.append(dtc->name);
             tileNames.append(" ");
         }
-        ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
+        //ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-int main(int argc, char** argv)
-{
-    // This app name will make app use /mvi/appmgr/appmgr.cfg as the default
-    // config file.
-    Application<AppManager> app("mvi/appmgr/appmgr");
-    return omain(app, argc, argv);
-}

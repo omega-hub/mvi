@@ -87,7 +87,7 @@ bool mviInit()
     // If we have already been allocated a multi-instance id, nothing needs to
     // be done here.
     MultiInstanceConfig& mic = SystemManager::instance()->getMultiInstanceConfig();
-    if(mic.enabled) return true;
+    if(mic.enabled || !SystemManager::instance()->isMaster()) return true;
 
     // Multi-instance not initialized yet. That means we are an external application
     // connecting to app manager (i.e. we have not been launched from inside 

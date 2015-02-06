@@ -81,12 +81,12 @@ private:
     int myBorderSize;
     Ref<Container> myContainer;
     Ref<Container> myBackground;
-    Ref<Button> myMinimizeButton;
-    Ref<Button> myCloseButton;
-    Ref<Button> myExpandLeftButton;
-    Ref<Button> myExpandRightButton;
-    Ref<Button> myShrinkRightButton;
-    Ref<Button> myShrinkLeftButton;
+    //Ref<Button> myMinimizeButton;
+    //Ref<Button> myCloseButton;
+    // Ref<Button> myExpandLeftButton;
+    // Ref<Button> myExpandRightButton;
+    // Ref<Button> myShrinkRightButton;
+    // Ref<Button> myShrinkLeftButton;
 
     PythonInterpreter* myInterpreter;
     bool myShowOverlay;

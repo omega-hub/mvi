@@ -221,6 +221,7 @@ void AppController::handleEvent(const Event& evt)
         // instance we can start tracking the head of the user whose controller
         // generated this event.
         myActiveUserId = evt.getUserId();
+        getEngine()->getDefaultCamera()->setTrackerUserId(myActiveUserId);
         myModifyingCanvas = true;
         if(myShowOverlay) show();
     }
@@ -236,25 +237,6 @@ void AppController::handleEvent(const Event& evt)
         DisplayConfig& dc = ds->getDisplayConfig();
         Rect canvas = dc.getCanvasRect();
         setAppCanvas(canvas);
-    }
-
-    // Head tracking management: if we get a mocap event whose id is the same
-    // as the user id and it is marked as tracking a head, we want to use this
-    // tracker as the head tracker for the application: change the event source
-    // if to the source id that the main camera uses for head tracking.
-    if(evt.getServiceType() == Service::Mocap && evt.getUserId() == myActiveUserId)
-    {
-        // By convention (as of omicron 3.0), if this mocap event has int extra data, 
-        // the first field is a joint id. This will not break with previous versions
-        // of omicron, but no joint data will be read here.
-        if(!evt.isExtraDataNull(0) && 
-            evt.getExtraDataType() == Event::ExtraDataIntArray &&
-            evt.getExtraDataInt(0) == Event::OMICRON_SKEL_HEAD)
-        {
-            Event& mutableEvent = const_cast<Event&>(evt);
-            int headTrackerId = getEngine()->getDefaultCamera()->getTrackerSourceId();
-            mutableEvent.resetSourceId(headTrackerId);
-        }
     }
 
     // See if this event happens inside the limits of the AppLauncher container
