@@ -164,6 +164,7 @@ void AppManager::onClientConnected(const String& clientId)
 
         // Send the application slot to the connected app.
         conn->sendMessage("slot", (void*)&ai->slot, sizeof(int32_t));
+        conn->close();
     }
     else
     {
@@ -174,7 +175,7 @@ void AppManager::onClientConnected(const String& clientId)
 
         AppInstance* ai = myAppInstances[clientId];
         ai->connection = conn;
-        myZSortedAppInstances.push_front(ai);
+        myZSortedAppInstances.push_back(ai);
     }
 }
 
@@ -197,7 +198,9 @@ void AppManager::onClientDisconnected(const String& clientId)
             myZSortedAppInstances.remove(ai);
             myAppInstances.erase(clientId);
         }
+        omsg("not here");
     }
+    omsg("here");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -213,8 +216,8 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     ai->z = myCurrentTopZ++;
 
     // Place app on top of z sorted app instance list.
-    myZSortedAppInstances.remove(ai);
-    myZSortedAppInstances.push_front(ai);
+    //myZSortedAppInstances.remove(ai);
+    //myZSortedAppInstances.push_back(ai);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -265,7 +268,7 @@ bool AppManager::get2DPointer(const Event& evt, Vector2i& out)
 AppInstance* AppManager::getAppAt(Vector2i pos)
 {
     // Find which app contains this pointer.
-    foreach(AppInstance* ai, myZSortedAppInstances)
+    BOOST_REVERSE_FOREACH(AppInstance* ai, myZSortedAppInstances)
     {
         Rect& cc = ai->currentCanvas;
         if(pos[0] >= cc.min[0] && pos[0] < cc.max[0] && 
@@ -305,8 +308,9 @@ bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
                 (void*)cmd.c_str(), cmd.size());
                 
             // Also place the application in front of the Z sorted instance list
+            ofmsg("APP ON FRONT %1%", %ii->target->id);
             myZSortedAppInstances.remove(ii->target);
-            myZSortedAppInstances.push_front(ii->target);
+            myZSortedAppInstances.push_back(ii->target);
         }
         myServer->broadcastEvent(evt, myServerConnection);
     }
@@ -434,7 +438,12 @@ bool AppManager::handleCommand(const String& cmd)
         StringUtils::trim(scriptName);
         run(scriptName);
     }
-
+    else if(StringUtils::startsWith(cmd, "a"))
+    {
+        updateTileAllocation();
+        sendActiveTileUpdates();
+    }
+    
     return true;
 }
 
@@ -515,17 +524,20 @@ void AppManager::updateTileAllocation()
     }
 
     // Loop over applications front-to-back
-    foreach(AppInstance* ai, myZSortedAppInstances)
+    BOOST_REVERSE_FOREACH(AppInstance* ai, myZSortedAppInstances)
     {
+        //ofmsg("-------------------------------------\nAPP %1%", %ai->id);
         foreach(TileAllocation* ta, myTileAllocation)
         {
-            // Compute the interection between the tile and application canvas.
+            // Compute the intersection between the tile and application canvas.
             Rect tileRect(ta->tile->offset, ta->tile->offset + ta->tile->pixelSize);
             pair<bool, Rect> localIntersection = ai->currentCanvas.getIntersection(tileRect);
 
             if(localIntersection.first)
             {
-                List< Ref<TileAllocation::LocalAppRect> > localAppsToRemove;
+                //ofmsg("Tile %1% intersect (%2% %3%)", 
+                //    %ta->tile->name %localIntersection.second.min %localIntersection.second.max);
+                
                 // Loop over the other applications that share this canvas.
                 // NOTE: since we are looping front-to-back, these apps will be
                 // in front of the current one.
@@ -534,31 +546,34 @@ void AppManager::updateTileAllocation()
                 // of applications active for this tile.
                 foreach(TileAllocation::LocalAppRect* lar, ta->apps)
                 {
-                    pair<bool, Rect> newLocalRect;
-                    lar->localRect.subtract(localIntersection.second);
-
+                    //ofmsg(">>> APP %1%", %lar->app->id);
+                    
+                    pair<bool, Rect> newLocalRect = lar->localRect.getIntersection(localIntersection.second);
                     if(newLocalRect.first)
                     {
-                        if(newLocalRect.second.size() == Vector2i::Zero())
+                        newLocalRect = localIntersection.second.subtract(lar->localRect);
+                        if(newLocalRect.first)
                         {
-                            localAppsToRemove.push_back(lar);
+                            //ofmsg(">>> diff (%1% %2%)", %newLocalRect.second.min %newLocalRect.second.max);
+                            localIntersection.second = newLocalRect.second;
                         }
-                        lar->localRect = newLocalRect.second;
+                        else
+                        {
+                            //ofmsg(">>> removing %1% from tile", %ai->id);
+                            localIntersection.first = false;
+                            break;
+                        }
                     }
                 }
-
-                // Remove apps with empty local rects from the apps enabled
-                // for this tile.
-                foreach(TileAllocation::LocalAppRect* lar, localAppsToRemove)
+                
+                if(localIntersection.first)
                 {
-                    ta->apps.remove(lar);
+                    // Add the current app to the list of apps enabled for this tile.
+                    TileAllocation::LocalAppRect* lar = new TileAllocation::LocalAppRect();
+                    lar->app = ai;
+                    lar->localRect = localIntersection.second;
+                    ta->apps.push_back(lar);
                 }
-
-                // Add the current app to the list of apps enabled for this tile.
-                TileAllocation::LocalAppRect* lar = new TileAllocation::LocalAppRect();
-                lar->app = ai;
-                lar->localRect = localIntersection.second;
-                ta->apps.push_back(lar);
             }
         }
     }
@@ -586,6 +601,10 @@ void AppManager::sendActiveTileUpdates()
             tileNames.append(dtc->name);
             tileNames.append(" ");
         }
+        String cmd = "setTileNamesEnabled('" + tileNames + "')";
+        ai->connection->sendMessage(
+            MissionControlMessageIds::ScriptCommand, 
+            (void*)cmd.c_str(), cmd.size());
         //ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
     }
 }
