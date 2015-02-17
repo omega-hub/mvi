@@ -66,6 +66,7 @@ void AppManager::initialize()
 
         // By default recompute tile allocation every second.
         myTileUpdateInterval = Config::getFloatValue("tileUpdateInterval", s, 1.0);
+        myTileAllocatorEnabled = Config::getBoolValue("tileAllocatorEnabled", s, true);
     }
 
     myServer = mySys->getMissionControlServer();
@@ -198,9 +199,7 @@ void AppManager::onClientDisconnected(const String& clientId)
             myZSortedAppInstances.remove(ai);
             myAppInstances.erase(clientId);
         }
-        omsg("not here");
     }
-    omsg("here");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -422,11 +421,14 @@ void AppManager::handleEvent(const Event& evt)
 ///////////////////////////////////////////////////////////////////////////////
 void AppManager::update(const UpdateContext& context)
 {
-    if(context.time - myLastTileUpdate > myTileUpdateInterval)
+    if(myTileAllocatorEnabled)
     {
-        myLastTileUpdate = context.time;
-        updateTileAllocation();
-        sendActiveTileUpdates();
+        if(context.time - myLastTileUpdate > myTileUpdateInterval)
+        {
+            myLastTileUpdate = context.time;
+            updateTileAllocation();
+            sendActiveTileUpdates();
+        }
     }
 }
 
@@ -441,11 +443,6 @@ bool AppManager::handleCommand(const String& cmd)
         String scriptName = cmd.substr(3);
         StringUtils::trim(scriptName);
         run(scriptName);
-    }
-    else if(StringUtils::startsWith(cmd, "a"))
-    {
-        updateTileAllocation();
-        sendActiveTileUpdates();
     }
     
     return true;
