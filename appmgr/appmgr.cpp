@@ -283,36 +283,49 @@ AppInstance* AppManager::getAppAt(Vector2i pos)
 ///////////////////////////////////////////////////////////////////////////////
 bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
 {
+    if(evt.getType() == Event::Down)
+    {
+        ofmsg("%1%", %evt.getFlags());
+        
+    }
     if(evt.isButtonDown(myModeSwitchButton))
     {
-        ii->controlMode = true;
-        // Disable the focus border around the currently focused application
-        if(ii->target != NULL)
+        ii->controlMode = !ii->controlMode;
+        
+        if(ii->controlMode)
         {
-            String cmd = "AppController.setFocus(False)";
-            ii->target->connection->sendMessage(
-                MissionControlMessageIds::ScriptCommand, 
-                (void*)cmd.c_str(), cmd.size());
+            ofmsg("control mode ON user %1%", %evt.getUserId());
+            
+            // Disable the focus border around the currently focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(False)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+            }
         }
-    }
-    else if(evt.isButtonUp(myModeSwitchButton))
-    {
-        ii->controlMode = false;
-        ii->lockedMode = false;
-        // Enable the focus border for the focused application
-        if(ii->target != NULL)
+        else
         {
-            String cmd = "AppController.setFocus(True)";
-            ii->target->connection->sendMessage(
-                MissionControlMessageIds::ScriptCommand, 
-                (void*)cmd.c_str(), cmd.size());
-                
-            // Also place the application in front of the Z sorted instance list
-            ofmsg("APP ON FRONT %1%", %ii->target->id);
-            myZSortedAppInstances.remove(ii->target);
-            myZSortedAppInstances.push_back(ii->target);
+            ofmsg("control mode OFF user %1%", %evt.getUserId());
+            
+            ii->lockedMode = false;
+            // Enable the focus border for the focused application
+            if(ii->target != NULL)
+            {
+                String cmd = "AppController.setFocus(True)";
+                ii->target->connection->sendMessage(
+                    MissionControlMessageIds::ScriptCommand, 
+                    (void*)cmd.c_str(), cmd.size());
+                    
+                // Also place the application in front of the Z sorted instance list
+                //ofmsg("APP ON FRONT %1%", %ii->target->id);
+                myZSortedAppInstances.remove(ii->target);
+                myZSortedAppInstances.push_back(ii->target);
+            }
+            //myServer->broadcastEvent(evt, myServerConnection);
+            //evt.setProcessed();
         }
-        myServer->broadcastEvent(evt, myServerConnection);
     }
     
     return ii->controlMode;
@@ -402,7 +415,7 @@ void AppManager::handleEvent(const Event& evt)
         {
             // We have a wand or pointer event and we are not in control mode:
             // send the event to the application registered to this event user
-            if(ii->target != NULL)
+            if(ii->target != NULL && !evt.isProcessed())
             {
                 //ofmsg("send %1% to %2%", %evt.getUserId() %ii->target->id);
                 myServer->sendEventTo(evt, ii->target->connection);

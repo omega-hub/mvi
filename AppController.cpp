@@ -215,29 +215,32 @@ void AppController::update(const UpdateContext& context)
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::handleEvent(const Event& evt)
 {
-    if(evt.isButtonDown(mysModeSwitchButton))
+    /*if(evt.isButtonDown(mysModeSwitchButton))
     {
-        // The mode switch button s also used to set the active user, so for
-        // instance we can start tracking the head of the user whose controller
-        // generated this event.
-        myActiveUserId = evt.getUserId();
-        getEngine()->getDefaultCamera()->setTrackerUserId(myActiveUserId);
-        myModifyingCanvas = true;
-        if(myShowOverlay) show();
-    }
-    else if(evt.isButtonUp(mysModeSwitchButton))
-    {
-        myModifyingCanvas = false;
-        myMovingCanvas = false;
-        mySizingCanvas = false;
-        if(myShowOverlay) hide();
+        myModifyingCanvas = !myModifyingCanvas;
         
-        // Done modifying canvas: send canvas update
-        DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-        DisplayConfig& dc = ds->getDisplayConfig();
-        Rect canvas = dc.getCanvasRect();
-        setAppCanvas(canvas);
-    }
+        if(myModifyingCanvas)
+        {
+            // The mode switch button s also used to set the active user, so for
+            // instance we can start tracking the head of the user whose controller
+            // generated this event.
+            myActiveUserId = evt.getUserId();
+            getEngine()->getDefaultCamera()->setTrackerUserId(myActiveUserId);
+            if(myShowOverlay) show();
+        }
+        else
+        {
+            myMovingCanvas = false;
+            mySizingCanvas = false;
+            if(myShowOverlay) hide();
+            
+            // Done modifying canvas: send canvas update
+            DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+            DisplayConfig& dc = ds->getDisplayConfig();
+            Rect canvas = dc.getCanvasRect();
+            setAppCanvas(canvas);
+        }
+    }*/
 
     // See if this event happens inside the limits of the AppLauncher container
     if(evt.getServiceType() == Service::Pointer)
@@ -245,7 +248,7 @@ void AppController::handleEvent(const Event& evt)
         const Vector3f& pos3 = evt.getPosition();
         Vector2i pos(pos3[0], pos3[1]);
 
-        if(myModifyingCanvas)
+        //if(myModifyingCanvas)
         {
             if(evt.getType() == Event::Down)
             {
@@ -271,6 +274,7 @@ void AppController::handleEvent(const Event& evt)
                     // Don't draw pointers while we move / resize the canvas.
                     // Since they will look to be drifting 
                     getEngine()->setDrawPointers(false);
+                    evt.setProcessed();
                 }
                 else if(evt.isFlagSet(mysResizeButton))
                 {
@@ -293,7 +297,32 @@ void AppController::handleEvent(const Event& evt)
                         canvas.max = canvas.min + Vector2i(sz,sz);
                         dc.setCanvasRect(canvas);
                     }
+                    evt.setProcessed();
                 }
+                
+                foreach(Shortcut* s, myShortcuts)
+                {
+                    if(evt.isButtonDown(s->button))
+                    {
+                        // Activate a target workspace
+                        if(s->target != NULL)
+                        {
+                            if(s->target->onActivated != "")
+                            {
+                                PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
+                                pi->queueCommand(s->target->onActivated);
+                            }
+                            DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
+                            DisplayConfig& dc = ds->getDisplayConfig();
+                            dc.bringToFront();
+                            const Rect& r = s->target->getWorkspaceRect();
+                            ofmsg("WORKSPACE %1%     %2% %3%", %s->target->getName() %r.min %r.max);
+                            setAppCanvas(r);
+                            evt.setProcessed();
+                        }
+                    }
+                }
+                
 
             }
             else if(evt.getType() == Event::Up)
@@ -319,35 +348,8 @@ void AppController::handleEvent(const Event& evt)
             }
 
             myButtonContainer->handleEvent(evt);
-
-            evt.setProcessed();
         }
         myLastPointerPos = pos;
-    }
-
-    if(myModifyingCanvas && evt.getType() == Event::Down)
-    {
-        foreach(Shortcut* s, myShortcuts)
-        {
-            if(evt.isButtonDown(s->button))
-            {
-                // Activate a target workspace
-                if(s->target != NULL)
-                {
-                    if(s->target->onActivated != "")
-                    {
-                        PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
-                        pi->queueCommand(s->target->onActivated);
-                    }
-                    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-                    DisplayConfig& dc = ds->getDisplayConfig();
-                    dc.bringToFront();
-                    const Rect& r = s->target->getWorkspaceRect();
-                    ofmsg("WORKSPACE %1%     %2% %3%", %s->target->getName() %r.min %r.max);
-                    setAppCanvas(r);
-                }
-            }
-        }
     }
 }
 
