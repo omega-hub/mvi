@@ -283,37 +283,28 @@ AppInstance* AppManager::getAppAt(Vector2i pos)
 ///////////////////////////////////////////////////////////////////////////////
 bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
 {
-    if(evt.getType() == Event::Down)
-    {
-        ofmsg("%1%", %evt.getFlags());
-        
-    }
     if(evt.isButtonDown(myModeSwitchButton))
     {
         ii->controlMode = !ii->controlMode;
         
         if(ii->controlMode)
         {
-            ofmsg("control mode ON user %1%", %evt.getUserId());
-            
             // Disable the focus border around the currently focused application
-            if(ii->target != NULL)
+            /*if(ii->target != NULL)
             {
                 String cmd = "AppController.setFocus(False)";
                 ii->target->connection->sendMessage(
                     MissionControlMessageIds::ScriptCommand, 
                     (void*)cmd.c_str(), cmd.size());
-            }
+            }*/
         }
         else
         {
-            ofmsg("control mode OFF user %1%", %evt.getUserId());
-            
             ii->lockedMode = false;
             // Enable the focus border for the focused application
             if(ii->target != NULL)
             {
-                String cmd = "AppController.setFocus(True)";
+                String cmd = ostr("AppController.setActiveUser(%1%)", %evt.getUserId());
                 ii->target->connection->sendMessage(
                     MissionControlMessageIds::ScriptCommand, 
                     (void*)cmd.c_str(), cmd.size());
@@ -608,17 +599,20 @@ void AppManager::sendActiveTileUpdates()
 {
     foreach(AppInstanceDictionary::Item ai, myAppInstances)
     {
-        String tileNames = "";
-        foreach(DisplayTileConfig* dtc, ai->activeTiles)
+        if(ai->connection != NULL)
         {
-            tileNames.append(dtc->name);
-            tileNames.append(" ");
+            String tileNames = "";
+            foreach(DisplayTileConfig* dtc, ai->activeTiles)
+            {
+                tileNames.append(dtc->name);
+                tileNames.append(" ");
+            }
+            String cmd = "setTileNamesEnabled('" + tileNames + "')";
+            ai->connection->sendMessage(
+                MissionControlMessageIds::ScriptCommand, 
+                (void*)cmd.c_str(), cmd.size());
+            //ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
         }
-        String cmd = "setTileNamesEnabled('" + tileNames + "')";
-        ai->connection->sendMessage(
-            MissionControlMessageIds::ScriptCommand, 
-            (void*)cmd.c_str(), cmd.size());
-        //ofmsg("APP %1% TILES %2%", %ai->id %tileNames);
     }
 }
 

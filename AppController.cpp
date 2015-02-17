@@ -6,7 +6,12 @@
 Event::Flags AppController::mysModeSwitchButton = Event::Alt;
 Event::Flags AppController::mysMoveButton = Event::Button1;
 Event::Flags AppController::mysResizeButton = Event::Button2;
-bool AppController::mysFocused = false;
+bool AppController::mysActiveUserId = false;
+
+// User colors
+Color sUserColors[] = {
+    
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resize)
@@ -17,9 +22,9 @@ void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resiz
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppController::setFocus(bool value)
+void AppController::setActiveUser(int userId)
 {
-    mysFocused = value;
+    mysActiveUserId = userId;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -187,27 +192,28 @@ void AppController::update(const UpdateContext& context)
         myContainer->setCenter(myBackground->getCenter());
     }
     
-    if(myCurrentFocus != mysFocused)
+    if(myActiveUserId != mysActiveUserId)
     {
-        myCurrentFocus = mysFocused;
-        if(mysFocused)
+        myActiveUserId = mysActiveUserId;
+        //if(mysFocused)
         {
             Container* root = myBackground->getContainer();
             // Choose a color based on active user ID:
-            if(myActiveUserId == 0) root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
-            else if(myActiveUserId == 1) root->setStyleValue("border", ostr("%1% #9638FF", %myBorderSize));
-            else if(myActiveUserId == 2) root->setStyleValue("border", ostr("%1% #96FF08", %myBorderSize));
-            else root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
+            String cs = Color::getColorByIndex(myActiveUserId).toString();
+            root->setStyleValue("border", 
+                ostr("%1% %2%", 
+                    %myBorderSize 
+                    %cs));
             
             // We are focused, make sure the application canvas is on front of
             // all other app canvases on the display.
             dc.bringToFront();
         }
-        else
+        /*else
         {
             Container* root = myBackground->getContainer();
             root->setStyleValue("border", "0 black");
-        }
+        }*/
     }
     myPointerDelta = Vector2i::Zero();
 }
