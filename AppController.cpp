@@ -11,6 +11,14 @@ Event::Flags AppController::mysResizeButton = Event::Button2;
 int AppController::mysActiveUserId = false;
 
 ///////////////////////////////////////////////////////////////////////////////
+void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resize)
+{
+    mysModeSwitchButton = (Event::Flags)modeSwitch;
+    mysMoveButton = (Event::Flags)move;
+    mysResizeButton = (Event::Flags)resize;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void AppController::setActiveUser(int userId)
 {
     mysActiveUserId = userId;

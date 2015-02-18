@@ -16,6 +16,8 @@ BOOST_PYTHON_MODULE(mvi)
     // App drawer
     PYAPI_REF_BASE_CLASS(AppController)
         PYAPI_STATIC_REF_GETTER(AppController, create)
+        PYAPI_STATIC_METHOD(AppController, setActiveUser)
+        PYAPI_STATIC_METHOD(AppController, configPhysicalButtons)
         ;
 
     def("mviInit", mviInit);
