@@ -1,25 +1,14 @@
 #include <omega/MouseService.h>
+#include <omega/Platform.h>
+#include <omega/MissionControl.h>
+#include <omega/DisplaySystem.h>
 
 #include "AppController.h"
-#include "WorkspaceLibrary.h"
 
 Event::Flags AppController::mysModeSwitchButton = Event::Alt;
 Event::Flags AppController::mysMoveButton = Event::Button1;
 Event::Flags AppController::mysResizeButton = Event::Button2;
-bool AppController::mysActiveUserId = false;
-
-// User colors
-Color sUserColors[] = {
-    
-};
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::configPhysicalButtons(uint modeSwitch, uint move, uint resize)
-{
-    mysModeSwitchButton = (Event::Flags)modeSwitch;
-    mysMoveButton = (Event::Flags)move;
-    mysResizeButton = (Event::Flags)resize;
-}
+int AppController::mysActiveUserId = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::setActiveUser(int userId)
@@ -28,25 +17,24 @@ void AppController::setActiveUser(int userId)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppController* AppController::create()
+AppController* AppController::create(const String& name)
 {
     PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
 
-    AppController* ad = new AppController(pi);
+    AppController* ad = new AppController(name, pi);
     ModuleServices::addModule(ad);
     return ad;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-AppController::AppController(PythonInterpreter* interp) :
+AppController::AppController(const String& name, PythonInterpreter* interp) :
+EngineModule(name),
 myUi(NULL), myInterpreter(interp), myModifyingCanvas(false),
 myActiveUserId(-1),
 myMovingCanvas(false), mySizingCanvas(false), myPointerDelta(Vector2i::Zero()),
 myUsingLocalPointer(false),
-myShowOverlay(false),
 myBorderSize(2),
-myAbsoluteMode(false),
-myCurrentFocus(false)
+myAbsoluteMode(false)
 {
     setPriority(EngineModule::PriorityHighest);
 }
@@ -54,9 +42,9 @@ myCurrentFocus(false)
 ///////////////////////////////////////////////////////////////////////////////
 void AppController::parseConfig(Config* cfg)
 {
-    if(cfg->exists("config/appController"))
+    if(cfg->exists("config/modules/" + getName()))
     {
-        Setting& s = cfg->lookup("config/appController");
+        Setting& s = cfg->lookup("config/modules/" + getName());
         String sModeSwitchButton = Config::getStringValue("modeSwitchButton", s, "");
         String sMoveButton = Config::getStringValue("moveButton", s, "");
         String sResizeButton = Config::getStringValue("resizeButton", s, "");
@@ -64,8 +52,6 @@ void AppController::parseConfig(Config* cfg)
         if(sMoveButton != "") mysMoveButton = Event::parseButtonName(sMoveButton);
         if(sResizeButton != "") mysResizeButton = Event::parseButtonName(sResizeButton);
         
-        myShowOverlay = Config::getBoolValue("showOverlay", s, myShowOverlay);
-
         myAbsoluteMode = Config::getBoolValue("absoluteMode", s, myAbsoluteMode);
         
         myBorderSize = Config::getIntValue("borderSize", s, myBorderSize);
@@ -83,66 +69,6 @@ void AppController::initialize()
     myUi = UiModule::createAndInitialize();
 
     //myDrawerScale = 1.0f;
-    myIconSize = 24 * Platform::scale;
-    int margin = 10 * Platform::scale;
-
-    myBackground = Container::create(Container::LayoutFree, myUi->getUi());
-    myBackground->setLayer(Widget::Front);
-    myBackground->setFillColor(Color(0, 0, 0, 0.4f));
-    myBackground->setFillEnabled(true);
-    myBackground->setAutosize(false);
-
-    DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-    DisplayConfig& dc = ds->getDisplayConfig();
-    myBackground->setSize(dc.getCanvasRect().size().cast<omicron::real>());
-
-    myContainer = Container::create(Container::LayoutFree, myBackground);
-    myContainer->setAutosize(false);
-    myContainer->setSize(Vector2f(myIconSize * 6 + margin * 2, myIconSize * 6 + margin * 2));
-    myContainer->setCenter(myBackground->getCenter());
-    myContainer->setStyleValue("border", "1 white");
-    myContainer->setFillColor(Color::Black);
-    myContainer->setFillEnabled(true);
-
-    myButtonContainer = Container::create(Container::LayoutHorizontal, myBackground);
-    myButtonContainer->setHorizontalAlign(Container::AlignRight);
-    //myButtonContainer->setPosition(Vector2f(5, margin + myIconSize));
-    myButtonContainer->setHeight(margin + myIconSize);
-    myButtonContainer->setAutosize(false);
-    myButtonContainer->setSizeAnchorEnabled(true);
-    myButtonContainer->setSizeAnchor(Vector2f(0, -1));
-    //myButtonContainer->setStyleValue("border", "1 green");
-    myButtonContainer->setFillColor(Color::Black);
-    myButtonContainer->setFillEnabled(true);
-    myButtonContainer->setVisible(false);
-
-    Image* dpad = Image::create(myContainer);
-    dpad->setData(ImageUtils::loadImage("mvi/icons/dpad.png"));
-    dpad->setSize(Vector2f(myIconSize * 4, myIconSize * 4));
-    dpad->setPosition(Vector2f(myIconSize + margin, myIconSize + margin));
-
-    Vector2f dpadCenter = dpad->getPosition() + Vector2f(myIconSize * 1.5f, myIconSize * 1.5f) - Vector2f(4, 0);
-    float dpadSize = (dpad->getSize() / 2).x() + myIconSize / 2.0f;
-
-    foreach(Shortcut* s, myShortcuts)
-    {
-        if(s->icon != NULL)
-        {
-            Button* btn = Button::create(myContainer);
-            btn->setIcon(s->icon);
-            btn->getImage()->setSize(Vector2f(myIconSize, myIconSize));
-            btn->setTextEnabled(false);
-
-            if(s->button == Event::ButtonLeft) btn->setCenter(dpadCenter + Vector2f(-dpadSize, 0));
-            else if(s->button == Event::ButtonRight) btn->setCenter(dpadCenter + Vector2f(dpadSize, 0));
-            else if(s->button == Event::ButtonUp) btn->setCenter(dpadCenter + Vector2f(0, -dpadSize));
-            else if(s->button == Event::ButtonDown) btn->setCenter(dpadCenter + Vector2f(0, dpadSize));
-        }
-    }
-
-    for(uint i = 0; i < 4; i++) updateButton(i);
-
-    hide();
 
     // Send our display size to the application manager.
     MissionControlClient* cli = SystemManager::instance()->getMissionControlClient();
@@ -184,23 +110,15 @@ void AppController::update(const UpdateContext& context)
         dc.setCanvasRect(canvas);
         //ofmsg("Sizing: %1%", %myPointerDelta);
     }
-
-    if(myModifyingCanvas)
-    {
-        // Resize/position the overlay.
-        myBackground->setSize(canvas.size().cast<omicron::real>());
-        myContainer->setCenter(myBackground->getCenter());
-    }
     
     if(myActiveUserId != mysActiveUserId)
     {
         myActiveUserId = mysActiveUserId;
         //if(mysFocused)
         {
-            Container* root = myBackground->getContainer();
             // Choose a color based on active user ID:
             String cs = Color::getColorByIndex(myActiveUserId).toString();
-            root->setStyleValue("border", 
+            myUi->getUi()->setStyleValue("border", 
                 ostr("%1% %2%", 
                     %myBorderSize 
                     %cs));
@@ -306,30 +224,6 @@ void AppController::handleEvent(const Event& evt)
                     evt.setProcessed();
                 }
                 
-                foreach(Shortcut* s, myShortcuts)
-                {
-                    if(evt.isButtonDown(s->button))
-                    {
-                        // Activate a target workspace
-                        if(s->target != NULL)
-                        {
-                            if(s->target->onActivated != "")
-                            {
-                                PythonInterpreter* pi = SystemManager::instance()->getScriptInterpreter();
-                                pi->queueCommand(s->target->onActivated);
-                            }
-                            DisplaySystem* ds = SystemManager::instance()->getDisplaySystem();
-                            DisplayConfig& dc = ds->getDisplayConfig();
-                            dc.bringToFront();
-                            const Rect& r = s->target->getWorkspaceRect();
-                            ofmsg("WORKSPACE %1%     %2% %3%", %s->target->getName() %r.min %r.max);
-                            setAppCanvas(r);
-                            evt.setProcessed();
-                        }
-                    }
-                }
-                
-
             }
             else if(evt.getType() == Event::Up)
             {
@@ -352,102 +246,9 @@ void AppController::handleEvent(const Event& evt)
             {
                 myPointerDelta += pos - myLastPointerPos;
             }
-
-            myButtonContainer->handleEvent(evt);
         }
         myLastPointerPos = pos;
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::show()
-{
-    myVisible = true;
-    myBackground->setEnabled(false);
-    myBackground->setVisible(true);
-
-    //Container* root = myBackground->getContainer();
-    //root->setStyleValue("border", ostr("%1% #FFB638", %myBorderSize));
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::hide()
-{
-    myVisible = false;
-    myBackground->setEnabled(false);
-    myBackground->setVisible(false);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-AppController::Shortcut* AppController::getOrCreateSortcut(Event::Flags button)
-{
-    foreach(Shortcut* s, myShortcuts)
-    {
-        if(s->button == button) return s;
-    }
-    Shortcut* s = new Shortcut();
-    s->button = button;
-    myShortcuts.push_back(s);
-    return s;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::setShortcut(Event::Flags button, const String& target, const String& command)
-{
-    Shortcut* s = getOrCreateSortcut(button);
-    WorkspaceLibrary* wm = WorkspaceLibrary::instance();
-    if(wm != NULL)
-    {
-        Vector<String> args = StringUtils::split(target, " ");
-        if(args.size() == 2)
-        {
-            Workspace* w = wm->getWorkspace(args[0], args[1]);
-            if(w != NULL)
-            {
-                s->target = w;
-                s->icon = w->getIcon();
-                return;
-            }
-        }
-    }
-
-    s->icon = ImageUtils::loadImage(target);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::setButton(uint index, PixelData* icon, const String& command)
-{
-    if(index >= 4)
-    {
-        owarn("AppController::setButton: only 4 buttons can be set");
-        return;
-    }
-    myButtonCommands[index] = command;
-    myButtonIcons[index] = icon;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void AppController::updateButton(uint index)
-{
-    // No command for this button - nothing to do.
-    if(myButtonCommands[index].size() == 0) return;
-
-    Button* b = NULL;
-
-    if(myButtons[index] == NULL)
-    {
-        myButtons[index] = Button::create(myButtonContainer);
-    }
-
-    b = myButtons[index];
-    int margin = 10 * Platform::scale;
-    
-    b->setIcon(myButtonIcons[index]);
-    b->getImage()->setSize(Vector2f(myIconSize, myIconSize));
-    b->setTextEnabled(false);
-    b->setUIEventCommand(myButtonCommands[index]);
-    b->setActiveStyle("scale: 1.2; alpha: 1");
-    b->setInactiveStyle("scale: 1; alpha: 0.7");
 }
 
 ///////////////////////////////////////////////////////////////////////////////

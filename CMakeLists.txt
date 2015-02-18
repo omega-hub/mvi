@@ -8,12 +8,6 @@ add_library(${MODULE_NAME} MODULE
 	mvi.cpp
 	AppController.cpp
 	AppController.h
-	Workspace.cpp
-	Workspace.h
-	WorkspaceLayout.cpp
-	WorkspaceLayout.h
-	WorkspaceLibrary.cpp
-	WorkspaceLibrary.h
 	)
 
 # Set the module library dependencies here

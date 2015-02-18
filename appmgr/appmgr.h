@@ -149,5 +149,6 @@ private:
     // Display config
     DisplayConfig myDisplayConfig;
     List< Ref<TileAllocation> > myTileAllocation;
+    bool myTileAllocatorEnabled;
 };
 #endif
