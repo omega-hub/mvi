@@ -365,6 +365,11 @@ void AppManager::sendPointerEvent(const Event& evt, Vector2i& pos, AppInstance* 
     Event& mutableEvent = const_cast<Event&>(evt);
     mutableEvent.setServiceType(Service::Pointer);
     mutableEvent.setPosition(pos[0], pos[1], 0);
+    
+    // If the event is an Update event, also convert it to a Move event, since
+    // pointer handling code expects that.
+    if(mutableEvent.getType() == Event::Update) mutableEvent.resetType(Event::Move);
+    
     myServer->sendEventTo(evt, ai->connection);
 }
 

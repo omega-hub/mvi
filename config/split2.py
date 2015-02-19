@@ -1,27 +1,26 @@
 from mvi import *
 
+# Sets the canvas rect using normalized coordinates.
+def canvas(x, y, w, h):
+    margin = 2
+    ps = getDisplayPixelSize()
+    dc = getDisplayConfig()
+    
+    x = int(x * ps[0]) + margin
+    y = int(y * ps[1]) + margin
+    w = int(w * ps[0]) - margin * 2
+    h = int(h * ps[1]) - margin * 2
+    
+    r = (x, y, w, h)
+    dc.setCanvasRect(r)
 
-
-def initWorkspace():
-    wl = WorkspaceLibrary.create()
-
-    center = wl.createLayout('center')
-    print(center)
-    center.createWorkspace('full', 'mvi/icons/center-full.png', 0, 0, 1, 1)
-
-    split = wl.createLayout('split')
-    split.createWorkspace('left',  'mvi/icons/left-12.png', 0, 0, 0.5, 1)
-    split.createWorkspace('right', 'mvi/icons/right-12.png', 0.5, 0, 0.5, 1)
-    split.createWorkspace('close', 'mvi/icons/close.png', 0, 0, 0, 0)
-
-    ac = AppController.create()
-    ac.setShortcut(EventFlags.ButtonLeft, "split left")
-    ac.setShortcut(EventFlags.ButtonRight, "split right")
-    ac.setShortcut(EventFlags.ButtonUp, "center full")
-    ac.setShortcut(EventFlags.ButtonDown, "split close", "oexit()")
-
-    ac.setButton(0, loadImage('mvi/icons/close.png'), 'oexit()')
+def onEvent():
+    e = getEvent()
+    if(e.getServiceType() == ServiceType.Pointer):
+        if(e.isButtonDown(EventFlags.ButtonLeft)): canvas(0, 0, 0.5, 1)
+        elif(e.isButtonDown(EventFlags.ButtonRight)): canvas(0.5, 0, 0.5, 1)
+        elif(e.isButtonDown(EventFlags.ButtonUp)): canvas(0, 0, 1, 1)
 
 
 if(mviInit()):    
-    queueCommand('initWorkspace()')
+    setEventFunction(onEvent)
