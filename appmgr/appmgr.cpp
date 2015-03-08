@@ -1,5 +1,10 @@
 #include "appmgr.h"
 
+#ifndef OMEGA_VERSION
+#include <version.h>
+#endif
+
+
 ///////////////////////////////////////////////////////////////////////////////
 #include "omega/PythonInterpreterWrapper.h"
 BOOST_PYTHON_MODULE(appmgr)
@@ -99,6 +104,15 @@ void AppManager::initialize()
     loadDisplayConfig(displayConfigFile);
 
     omsg("Application Manager initialization complete!");
+
+    // Do we have a default script to launch?
+    // oxargv only supported in omegalib 6.4+
+#if(OMEGA_VERSION_NUM >= 6040)
+    if(oxargv().size() > 0 && StringUtils::endsWith(oxargv()[0], ".py"))
+    {
+        run(oxargv()[0]);
+    }
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
