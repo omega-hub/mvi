@@ -484,7 +484,7 @@ void AppManager::run(const String& script)
     }
     else
     {
-        String cmd = ostr("./orun %1% -s %2% -N %3% -I %4% --mc @localhost",
+        String cmd = ostr("./orun -c %1% -s %2% -N %3% -I %4% --mc @localhost",
             %myAppConfig
             %script
             %ai->id
