@@ -296,11 +296,12 @@ AppInstance* AppManager::getAppAt(Vector2i pos)
 ///////////////////////////////////////////////////////////////////////////////
 bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
 {
-    if(evt.isButtonDown(myModeSwitchButton))
+    //if(evt.isButtonDown(myModeSwitchButton))
     {
-        ii->controlMode = !ii->controlMode;
+        //ii->controlMode = !ii->controlMode;
+        ii->controlMode = evt.isFlagSet(myModeSwitchButton);
         
-        if(ii->controlMode)
+        if(evt.isButtonDown(myModeSwitchButton))
         {
             // Disable the focus border around the currently focused application
             /*if(ii->target != NULL)
@@ -484,7 +485,7 @@ void AppManager::run(const String& script)
     }
     else
     {
-        String cmd = ostr("./orun -c %1% -s %2% -N %3% -I %4% --mc @localhost",
+        String cmd = ostr("./orun -c %1% -s %2% -N %3% -I %4% --mc @localhost --interactive-off",
             %myAppConfig
             %script
             %ai->id
