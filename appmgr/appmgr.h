@@ -89,7 +89,7 @@ public:
     void setLauncherApp(const String& appid);
 
     // Run a script using orun
-    void run(const String& script);
+    String run(const String& script);
 
 private:
     void loadDisplayConfig(String configFileName);

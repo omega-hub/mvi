@@ -15,6 +15,7 @@ BOOST_PYTHON_MODULE(appmgr)
         PYAPI_STATIC_REF_GETTER(AppManager, instance)
         PYAPI_METHOD(AppManager, onAppCanvasChange)
         PYAPI_METHOD(AppManager, setLauncherApp)
+        PYAPI_METHOD(AppManager, run)
         ;
 }
 
@@ -89,8 +90,6 @@ void AppManager::initialize()
 
     // Use the python interpreter to load and initialize the porthole web server.
     PythonInterpreter* interpreter = mySys->getScriptInterpreter();
-    //interpreter->eval("import porthole");
-    //interpreter->eval("porthole.initialize('mvi/appmgr/pointer.xml')");
 
     // Initialize python API and create a variable 'appmgr' storing the
     // AppManager instance
@@ -110,7 +109,7 @@ void AppManager::initialize()
 #if(OMEGA_VERSION_NUM >= 6040)
     if(oxargv().size() > 0 && StringUtils::endsWith(oxargv()[0], ".py"))
     {
-        run(oxargv()[0]);
+        interpreter->runFile(oxargv()[0]);
     }
 #endif
 }
@@ -229,8 +228,8 @@ void AppManager::onAppCanvasChange(const String& appid, int x, int y, int w, int
     ai->z = myCurrentTopZ++;
 
     // Place app on top of z sorted app instance list.
-    //myZSortedAppInstances.remove(ai);
-    //myZSortedAppInstances.push_back(ai);
+    myZSortedAppInstances.remove(ai);
+    myZSortedAppInstances.push_back(ai);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -469,7 +468,7 @@ bool AppManager::handleCommand(const String& cmd)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void AppManager::run(const String& script)
+String AppManager::run(const String& script)
 {
     // get an app name based on the script
     String appname;
@@ -482,20 +481,24 @@ void AppManager::run(const String& script)
     if(ai == NULL)
     {
         ofwarn("AppManager::run: failed to allocate new app instance for %1%", %script);
+        return "";
     }
-    else
-    {
-        String cmd = ostr("./orun -c %1% -s %2% -N %3% -I %4% --mc @localhost --interactive-off",
-            %myAppConfig
-            %script
-            %ai->id
-            %ai->slot);
+    
+    String orunPath = StringUtils::replaceAll(ogetexecpath(), "appmgr", "orun");
+    
+    String cmd = ostr("%1% -c %2% -s %3% -N %4% -I %5% --mc @localhost --interactive-off",
+        %orunPath
+        %myAppConfig
+        %script
+        %ai->id
+        %ai->slot);
 
-        myAppInstances[ai->id] = ai;
-        ofmsg("Running %1%: %2%", %ai->id %script);
+    myAppInstances[ai->id] = ai;
+    ofmsg("Running %1%: %2%", %ai->id %script);
 
-        olaunch(cmd);
-    }
+    olaunch(cmd);
+    
+    return ai->id;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

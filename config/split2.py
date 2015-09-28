@@ -13,13 +13,17 @@ def canvas(x, y, w, h):
     
     r = (x, y, w, h)
     dc.setCanvasRect(r)
+    dc.bringToFront()
+    
+    mcc = getMissionControlClient()
+    mcc.postCommand("@server: appmgr.onAppCanvasChange('{0}', {1}, {2}, {3}, {4})".format(mcc.getName(), x, y, w, h))
 
 def onEvent():
     e = getEvent()
-    if(e.getServiceType() == ServiceType.Pointer):
-        if(e.isButtonDown(EventFlags.ButtonLeft)): canvas(0, 0, 0.5, 1)
-        elif(e.isButtonDown(EventFlags.ButtonRight)): canvas(0.5, 0, 0.5, 1)
-        elif(e.isButtonDown(EventFlags.ButtonUp)): canvas(0, 0, 1, 1)
+    #if(e.getServiceType() == ServiceType.Pointer):
+    #    if(e.isButtonDown(EventFlags.ButtonLeft)): canvas(0, 0, 0.5, 1)
+    #    elif(e.isButtonDown(EventFlags.ButtonRight)): canvas(0.5, 0, 0.5, 1)
+    #    elif(e.isButtonDown(EventFlags.ButtonUp)): canvas(0, 0, 1, 1)
 
 
 if(mviInit()):    
