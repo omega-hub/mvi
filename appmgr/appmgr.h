@@ -60,6 +60,10 @@ struct InputInfo: ReferenceType
     
     // Target application for this input source;
     Ref<AppInstance> target;
+    
+    // User head position and orientation for this input source (if available)
+    Vector3f headPosition;
+    Quaternion headOrientation;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -91,12 +95,12 @@ public:
     // Run a script using orun
     String run(const String& script);
 
+    InputInfo* getOrCreateInputInfo(int userId);
 private:
     void loadDisplayConfig(String configFileName);
 
     // Get a 2D pointer out of a pointer or wand event
     bool get2DPointer(const Event& evt, Vector2i& out);
-    InputInfo* getOrCreateInputInfo(const Event& evt);
     AppInstance* getAppAt(Vector2i pos);
     
     AppInstance* allocAppInstance(String appName);

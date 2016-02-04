@@ -122,6 +122,8 @@ void AppController::update(const UpdateContext& context)
     if(myActiveUserId != mysActiveUserId)
     {
         myActiveUserId = mysActiveUserId;
+        getEngine()->getDefaultCamera()->setTrackerUserId(myActiveUserId);
+        ofmsg("switching to user %1%", %myActiveUserId);
         //if(mysFocused)
         {
             // Choose a color based on active user ID:

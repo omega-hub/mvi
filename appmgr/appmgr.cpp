@@ -16,6 +16,12 @@ BOOST_PYTHON_MODULE(appmgr)
         PYAPI_METHOD(AppManager, onAppCanvasChange)
         PYAPI_METHOD(AppManager, setLauncherApp)
         PYAPI_METHOD(AppManager, run)
+        PYAPI_REF_GETTER(AppManager, getOrCreateInputInfo)
+        ;
+        
+    PYAPI_REF_BASE_CLASS(InputInfo)
+        PYAPI_VALUE_PROPERTY(InputInfo, headPosition)
+        PYAPI_VALUE_PROPERTY(InputInfo, headOrientation)
         ;
 }
 
@@ -242,20 +248,20 @@ void AppManager::setLauncherApp(const String& appid)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-InputInfo* AppManager::getOrCreateInputInfo(const Event& evt)
+InputInfo* AppManager::getOrCreateInputInfo(int userId)
 {
     InputInfo* ii = NULL;
     // If we do not have an entry from this user in the input info table,
     // create it now.
-    if(myInputInfoTable.find(evt.getUserId()) == myInputInfoTable.end())
+    if(myInputInfoTable.find(userId) == myInputInfoTable.end())
     {
         ii = new InputInfo();
-        ofmsg("Creating input info entry for user %1%", %evt.getUserId());
-        myInputInfoTable[evt.getUserId()] = ii;
+        ofmsg("Creating input info entry for user %1%", %userId);
+        myInputInfoTable[userId] = ii;
     }
     else
     {
-        ii = myInputInfoTable[evt.getUserId()];
+        ii = myInputInfoTable[userId];
     }
     return ii;
 }
@@ -300,7 +306,7 @@ bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
         //ii->controlMode = !ii->controlMode;
         ii->controlMode = evt.isFlagSet(myModeSwitchButton);
         
-        if(evt.isButtonDown(myModeSwitchButton))
+        if(evt.isButtonUp(myModeSwitchButton))
         {
             // Disable the focus border around the currently focused application
             /*if(ii->target != NULL)
@@ -310,13 +316,14 @@ bool AppManager::processControlMode(const Event& evt, InputInfo* ii)
                     MissionControlMessageIds::ScriptCommand, 
                     (void*)cmd.c_str(), cmd.size());
             }*/
-        }
+        /*}
         else
-        {
+        {*/
             ii->lockedMode = false;
             // Enable the focus border for the focused application
             if(ii->target != NULL)
             {
+                ofmsg("App %1% active user: %2%", %ii->target->id %evt.getUserId());
                 String cmd = ostr("AppController.setActiveUser(%1%)", %evt.getUserId());
                 ii->target->connection->sendMessage(
                     MissionControlMessageIds::ScriptCommand, 
@@ -393,7 +400,7 @@ void AppManager::handleEvent(const Event& evt)
     if(evt.getServiceType() == Service::Pointer || 
         evt.getServiceType() == Service::Wand)
     {
-        InputInfo* ii = getOrCreateInputInfo(evt);
+        InputInfo* ii = getOrCreateInputInfo(evt.getUserId());
         
         // Are we in canvas control mode?
         if(processControlMode(evt, ii))
@@ -433,6 +440,22 @@ void AppManager::handleEvent(const Event& evt)
     }
     else
     {
+        if(evt.getServiceType() == Service::Mocap)
+        {
+            // By convention (as of omicron 3.0), if this mocap event has int extra data,
+            // the first field is a joint id. This will not break with previous versions
+            // of omicron, but no joint data will be read here.
+            // NOTE: we need this check because multiple trackables may
+            // share the same user id. We only want the head.
+            if(!evt.isExtraDataNull(0) &&
+                evt.getExtraDataType() == Event::ExtraDataIntArray &&
+                evt.getExtraDataInt(0) == Event::OMICRON_SKEL_HEAD)
+            {
+                InputInfo* ii = getOrCreateInputInfo(evt.getUserId());
+                ii->headPosition = evt.getPosition();
+                ii->headOrientation = evt.getOrientation();
+            }
+        }
         myServer->broadcastEvent(evt, myServerConnection);
     }
 }
